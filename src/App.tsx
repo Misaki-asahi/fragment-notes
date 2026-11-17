@@ -26,7 +26,7 @@ function App() {
       </header>
 
       <main className="mx-auto max-w-6xl px-6 pb-20 pt-14">
-        <p className="kicker">Study Decks · 阶段 1 基础框架</p>
+        <p className="kicker">Study Decks · 离线示例</p>
         <h1
           className="typewriter mt-4 font-display font-extralight tracking-[0.06em] text-ink"
           style={{ fontSize: "clamp(19px, 5vw, 38px)", ["--chars" as string]: 16 }}
@@ -35,7 +35,7 @@ function App() {
         </h1>
         <p className="mt-5 max-w-2xl text-sm leading-relaxed text-ink-2">
           粘贴提纲、上传笔记照片或课件 PDF，AI 一次性产出概念摘要、易混点对比、记忆闪卡与随堂自测。
-          当前为数据契约 + 内置示例的离线展示，交互 UI 与 AI 解析正在开发中。
+          当前提供内置示例的离线浏览，AI 解析与交互学习功能即将上线。
         </p>
         <p className="mt-6 font-mono text-xs tracking-wider text-ink-3">
           {sampleDecks.length} DECKS · {totals.cards} FLASHCARDS · {totals.quizzes} QUIZZES
@@ -87,7 +87,7 @@ function App() {
         </section>
 
         <p className="mt-16 border-t border-edge pt-6 font-mono text-[11px] tracking-wider text-ink-3">
-          NEXT › 3D 闪卡 / 概念对比 / 3 分钟小测 / 大白话错题本 / 专注计时 · 阶段 2 接入
+          NEXT › 3D 闪卡 / 概念对比 / 3 分钟小测 / 大白话错题本 / 专注计时 · 即将上线
         </p>
       </main>
     </div>

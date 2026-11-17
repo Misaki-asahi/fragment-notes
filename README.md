@@ -41,13 +41,6 @@ React 18 + TypeScript + Vite · Tailwind CSS v4 · lucide-react · 浏览器 loc
 | `src/components/core/` | 上传区、加载骨架屏、历史牌组抽屉 |
 | `src/components/rookie/` | 独立 UI 组件：3D 闪卡、概念对比矩阵、错题本、专注计时 |
 
-## 参与开发
-
-1. 从 `dev` 切出功能分支：`git checkout -b feat/your-feature`
-2. 组件一律通过 Props 接收 `StudyDeck` 数据，不要写死假数据；改契约需全队同步
-3. 提交前自检：`npx tsc --noEmit && npm run build`，并确认改动范围在自己的目录内
-4. 提 PR 合入 `dev`，联调稳定后由维护者发布到 `main`
-
 ## 环境变量
 
 复制 `.env.example` 为 `.env` 并填入 `AI_API_KEY`（仅供服务端转发层使用）。`.env` 已被 gitignore，请勿提交真实密钥。
