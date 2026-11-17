@@ -1,1 +1,162 @@
 @import "tailwindcss";
+@import "@fontsource-variable/noto-sans-sc";
+@import "@fontsource-variable/noto-serif-sc";
+@import "@fontsource-variable/cinzel";
+@import "@fontsource-variable/jetbrains-mono";
+
+/* 语义令牌：组件只允许使用语义类名（bg-surface / text-ink / border-edge ...），
+   换肤只改这里两套变量值，不改任何组件。 */
+:root {
+  color-scheme: dark;
+  --void: #07051a;
+  --surface: #120c30;
+  --surface-2: #1a1240;
+  --edge: rgba(190, 160, 255, 0.16);
+  --edge-2: rgba(190, 160, 255, 0.28);
+  --ink: #efeaff;
+  --ink-2: #c9c0ec;
+  --ink-3: #9a8fc6;
+  --accent: #9b5cff;
+  --accent-2: #7af4ff;
+  --accent-3: #ff4fd8;
+  --gold: #e8c77a;
+  --ok: #7cf0b4;
+  --warn: #ffc46b;
+  --bad: #ff6b8a;
+  --edge-grad: linear-gradient(
+    135deg,
+    rgba(155, 92, 255, 0.75),
+    rgba(255, 79, 216, 0.38) 28%,
+    rgba(233, 227, 255, 0.07) 52%,
+    rgba(122, 244, 255, 0.2) 78%,
+    rgba(155, 92, 255, 0.55)
+  );
+  --nebula: radial-gradient(130% 90% at 0% 0%, rgba(155, 92, 255, 0.16), transparent 55%),
+    radial-gradient(90% 70% at 100% 100%, rgba(255, 79, 216, 0.08), transparent 60%);
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --void: #f5f7fb;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --edge: #e2e8f0;
+  --edge-2: #cbd5e1;
+  --ink: #0f172a;
+  --ink-2: #475569;
+  --ink-3: #64748b;
+  --accent: #4f46e5;
+  --accent-2: #0284c7;
+  --accent-3: #db2777;
+  --gold: #b45309;
+  --ok: #059669;
+  --warn: #d97706;
+  --bad: #e11d48;
+  --edge-grad: linear-gradient(
+    135deg,
+    rgba(79, 70, 229, 0.45),
+    rgba(2, 132, 199, 0.25) 40%,
+    rgba(226, 232, 240, 0.6) 60%,
+    rgba(79, 70, 229, 0.35)
+  );
+  --nebula: radial-gradient(130% 90% at 0% 0%, rgba(79, 70, 229, 0.07), transparent 55%),
+    radial-gradient(90% 70% at 100% 100%, rgba(2, 132, 199, 0.06), transparent 60%);
+}
+
+@theme inline {
+  --color-void: var(--void);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-edge: var(--edge);
+  --color-edge-2: var(--edge-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --color-accent-3: var(--accent-3);
+  --color-gold: var(--gold);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
+  --font-sans: "Noto Sans SC Variable", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-display: "Cinzel Variable", "Noto Serif SC Variable", "Songti SC", serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "Cascadia Mono", monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-void font-sans text-ink antialiased;
+  }
+
+  /* 星云渐变 + 细噪声纹理底层 */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: var(--nebula);
+    pointer-events: none;
+  }
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    opacity: 0.5;
+    background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .92  0 0 0 0 .86  0 0 0 0 1  0 0 0 .05 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    pointer-events: none;
+  }
+}
+
+@layer components {
+  /* 直角卡片 + 渐变发光描边 */
+  .edge-glow {
+    border: 1px solid transparent;
+    background:
+      linear-gradient(var(--surface), var(--surface)) padding-box,
+      var(--edge-grad) border-box;
+  }
+
+  /* 等宽大写分区 kicker */
+  .kicker {
+    @apply font-mono text-xs font-semibold uppercase tracking-[0.22em] text-accent-2;
+  }
+
+  /* 打字机标题：--chars 为字符数，CJK 按 1em 步进 */
+  .typewriter {
+    overflow: hidden;
+    white-space: nowrap;
+    width: 0;
+    border-right: 2px solid var(--accent-2);
+    animation:
+      typing 2.2s steps(var(--chars, 20), end) 0.3s forwards,
+      caret 0.9s step-end infinite;
+  }
+}
+
+@keyframes typing {
+  to {
+    width: calc(var(--chars, 20) * 1em);
+  }
+}
+@keyframes caret {
+  50% {
+    border-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typewriter {
+    animation: none;
+    width: auto;
+    border-right: none;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
