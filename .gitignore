@@ -30,3 +30,6 @@ Desktop.ini
 .obsidian/workspace.json
 .obsidian/workspace-mobile.json
 .obsidian/cache
+# 本地分发给队友的真名简报副本（不入库，公开仓库不出现真实姓名）
+docs/席泽琛1.md
+docs/贾钧淋1.md
