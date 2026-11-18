@@ -19,7 +19,7 @@ npm install
 npm run dev        # 打开 http://localhost:5173
 ```
 
-> 注意：不要双击 `index.html` 直接打开（`file://` 协议下会白屏）。本项目需经开发服务器访问；预览打包产物用 `npm run build && npm run preview`。
+> 双击 `index.html` 可离线打开自包含展示页（无需服务器与网络）；开发实时预览用 `npm run dev`（http://localhost:5173），打包产物预览用 `npm run build && npm run preview`。
 
 内置计算机网络、高等数学、心理学三套完整示例牌组，无需配置任何密钥即可离线浏览。
 
