@@ -76,7 +76,6 @@
   }
   body {
     @apply bg-void font-sans text-ink antialiased;
-    overflow-x: clip;
   }
 
   /* 主题化滚动条 */
