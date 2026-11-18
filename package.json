@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "sync:standalone": "node scripts/sync-standalone.mjs"
   },
   "dependencies": {
     "@fontsource-variable/noto-sans-sc": "^5.3.1",

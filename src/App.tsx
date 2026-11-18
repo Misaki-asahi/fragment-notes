@@ -13,67 +13,18 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ThemeToggle } from "./components/ThemeToggle";
+import { FAQ, FEATURES, HERO, NAV } from "./content";
 import { sampleDecks } from "./mock/sampleDecks";
 import type { StudyDeck } from "./types/deck";
 
-const NAV = [
-  { id: "decks", label: "示例牌组" },
-  { id: "experience", label: "核心体验" },
-  { id: "stats", label: "数据" },
-  { id: "faq", label: "常见问题" },
-];
-
-const FEATURES = [
-  {
-    icon: FileText,
-    title: "多源投喂",
-    desc: "粘贴大段提纲、上传课堂笔记照片或课件 PDF，也可以一键填入内置示例，零门槛开始。",
-  },
-  {
-    icon: Lightbulb,
-    title: "知识梳理",
-    desc: "自动提炼高频考点，用左右对照表讲清「概念 A vs 概念 B」的判别边界与考法。",
-  },
-  {
-    icon: Layers,
-    title: "3D 记忆闪卡",
-    desc: "丝滑翻卡 + 键盘快捷键 + 掌握度标记，把短期记忆变成长期记忆。",
-  },
-  {
-    icon: ListChecks,
-    title: "3 分钟随堂小测",
-    desc: "限时测验自动判分，答错的题自动归入错题本，闭环巩固不遗漏。",
-  },
-  {
-    icon: BookOpen,
-    title: "大白话错题本",
-    desc: "每道错题附生活类比式原理解释，还能追问「换个比喻再讲一遍」。",
-  },
-  {
-    icon: Timer,
-    title: "专注伴学",
-    desc: "轻量专注倒计时与深呼吸休息提示，复习节奏张弛有度。",
-  },
-];
-
-const FAQ = [
-  {
-    q: "这个工具是怎么工作的？",
-    a: "你把碎片资料交给 AI 多模态解析引擎，它按统一的数据契约一次性产出概念摘要、易混点对比、记忆闪卡与随堂自测四件套，再由界面渲染成可翻、可测、可复盘的学习材料。",
-  },
-  {
-    q: "我的笔记和数据存在哪里？",
-    a: "牌组历史、闪卡掌握度与错题本都保存在你浏览器本地的 localStorage 中，刷新不丢失；解析请求经服务端转发层调用大模型，API Key 不会暴露在前端。",
-  },
-  {
-    q: "不配置密钥能体验吗？",
-    a: "能。内置计算机网络、高等数学、心理学三套完整示例牌组，无需任何配置即可离线浏览概念、对比、闪卡与自测题内容。",
-  },
-  {
-    q: "支持哪些资料格式？",
-    a: "纯文本提纲、JPG/PNG 笔记照片与课件 PDF。PDF 在浏览器内提取文字、图片压缩后送往多模态模型，超长资料会给出友好的截断提示。",
-  },
-];
+const FEATURE_ICONS: Record<string, typeof FileText> = {
+  file: FileText,
+  bulb: Lightbulb,
+  layers: Layers,
+  checks: ListChecks,
+  book: BookOpen,
+  timer: Timer,
+};
 
 const totals = sampleDecks.reduce(
   (acc, d) => ({
@@ -212,8 +163,8 @@ function App() {
       <header className="sticky top-0 z-40 w-full bg-surface/50 px-4 py-5 backdrop-blur-sm">
         <div className="container mx-auto flex max-w-6xl items-center justify-between gap-4">
           <a href="#top" className="flex items-baseline gap-3 transition-opacity hover:opacity-80">
-            <span className="text-base font-black tracking-wide md:text-lg">碎片笔记</span>
-            <span className="hidden text-sm font-bold text-ink-3 md:inline">一键变闪卡与自测题</span>
+            <span className="text-base font-black tracking-wide md:text-lg">{HERO.brand}</span>
+            <span className="hidden text-sm font-bold text-ink-3 md:inline">{HERO.brandSub}</span>
           </a>
           <nav aria-label="主导航" className="flex items-center gap-3 md:gap-8">
             <ul className="flex items-center gap-3 text-xs md:gap-8 md:text-base">
@@ -238,20 +189,18 @@ function App() {
           <div className="max-w-xl">
             <h1
               className="typewriter mx-auto py-6 text-4xl font-bold"
-              style={{ fontSize: "clamp(24px, 5vw, 36px)", ["--chars" as string]: 16 }}
+              style={{ fontSize: "clamp(24px, 5vw, 36px)", ["--chars" as string]: HERO.title.length }}
             >
-              碎片笔记 · 一键变闪卡与自测题
+              {HERO.title}
             </h1>
-            <p className="text-lg leading-relaxed text-ink-2">
-              把散落的课堂笔记、复习提纲、课件 PDF，变成能翻、能测、能复盘的学习材料。
-            </p>
+            <p className="text-lg leading-relaxed text-ink-2">{HERO.sub}</p>
             <div className="flex flex-wrap items-center justify-center gap-6 pt-12">
               <a href="#decks" className="btn-primary">
-                浏览示例牌组
+                {HERO.cta}
                 <ArrowDown className="h-4 w-4" />
               </a>
               <a href="#faq" className="font-bold text-accent underline transition hover:opacity-80">
-                它怎么工作？
+                {HERO.ctaAlt}
               </a>
             </div>
           </div>
@@ -291,13 +240,16 @@ function App() {
           <h2 className="mt-2 text-2xl font-bold">核心体验</h2>
           <hr className="rule-accent" />
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.map((f) => (
-              <div key={f.title} className="rounded-md border border-edge bg-surface p-6">
-                <f.icon className="h-6 w-6 text-accent" />
-                <h3 className="mt-4 text-lg font-bold">{f.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-ink-2">{f.desc}</p>
-              </div>
-            ))}
+            {FEATURES.map((f) => {
+              const Icon = FEATURE_ICONS[f.icon];
+              return (
+                <div key={f.title} className="rounded-md border border-edge bg-surface p-6">
+                  <Icon className="h-6 w-6 text-accent" />
+                  <h3 className="mt-4 text-lg font-bold">{f.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-ink-2">{f.desc}</p>
+                </div>
+              );
+            })}
           </div>
         </section>
 
