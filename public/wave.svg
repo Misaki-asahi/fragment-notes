@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="743" viewBox="0 0 1440 743" fill="none">
+  <g stroke-linecap="round">
+    <path d="M-20 96 C 180 40, 340 150, 540 104 S 900 30, 1100 92 S 1360 150, 1460 84" stroke="#9b77ff" stroke-opacity=".28" stroke-width="1.5"/>
+    <path d="M-20 150 C 200 92, 360 208, 560 158 S 920 84, 1120 148 S 1380 208, 1460 140" stroke="#7e4fff" stroke-opacity=".22" stroke-width="1.5"/>
+    <path d="M-20 208 C 220 148, 380 268, 580 214 S 940 140, 1140 206 S 1400 268, 1460 198" stroke="#4413cb" stroke-opacity=".35" stroke-width="1.5"/>
+    <path d="M-20 268 C 240 206, 400 330, 600 272 S 960 198, 1160 266 S 1420 330, 1460 258" stroke="#9b77ff" stroke-opacity=".16" stroke-width="1.5"/>
+    <path d="M-20 330 C 260 266, 420 392, 620 332 S 980 258, 1180 328 S 1440 392, 1460 320" stroke="#7e4fff" stroke-opacity=".12" stroke-width="1.5"/>
+    <path d="M-20 394 C 280 328, 440 456, 640 394 S 1000 320, 1200 392 S 1460 456, 1460 384" stroke="#4413cb" stroke-opacity=".18" stroke-width="1.5"/>
+    <path d="M-20 460 C 300 392, 460 522, 660 458 S 1020 384, 1220 458 S 1460 522, 1460 450" stroke="#9b77ff" stroke-opacity=".09" stroke-width="1.5"/>
+    <path d="M-20 528 C 320 458, 480 590, 680 524 S 1040 450, 1240 526 S 1460 590, 1460 518" stroke="#7e4fff" stroke-opacity=".06" stroke-width="1.5"/>
+  </g>
+</svg>
