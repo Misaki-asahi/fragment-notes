@@ -3,6 +3,7 @@ import { ThemeToggle } from "../ThemeToggle";
 import { sampleDecks } from "../../mock/sampleDecks";
 import type { StudyDeck } from "../../types/deck";
 import { FlashCardDeck } from "./FlashCardDeck";
+import { ConceptMatrix } from "./ConceptMatrix";
 
 const deck = sampleDecks[0];
 
@@ -38,6 +39,14 @@ export function RookiePreview() {
 
         <section>
           <FlashCardDeck cards={cards} onUpdateStatus={handleUpdateStatus} />
+        </section>
+
+        <section>
+          <ConceptMatrix
+            summary={deck.sourceSummary}
+            concepts={deck.concepts}
+            confusions={deck.confusions}
+          />
         </section>
       </div>
     </div>
