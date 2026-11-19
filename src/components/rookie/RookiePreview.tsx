@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ThemeToggle } from "../ThemeToggle";
 import { sampleDecks } from "../../mock/sampleDecks";
 import type { StudyDeck } from "../../types/deck";
+import { FlashCardDeck } from "./FlashCardDeck";
 
 const deck = sampleDecks[0];
 
@@ -36,24 +37,7 @@ export function RookiePreview() {
         </section>
 
         <section>
-          <p className="kicker">FLASHCARDS</p>
-          <hr className="rule-accent" />
-          <div className="rounded-md border border-edge bg-surface p-6 text-sm text-ink-2">
-            FlashCardDeck 组件将在 Level 1 挂载到这里。
-            <span className="mt-2 block text-xs text-ink-3">
-              回调已就绪：onUpdateStatus 会 console.log 并更新本地 cards 状态。
-            </span>
-            <button
-              type="button"
-              onClick={() => handleUpdateStatus(cards[0].id, "mastered")}
-              className="btn-primary mt-4 px-4 py-2 text-xs"
-            >
-              试一下回调：标记第一张卡为已掌握
-            </button>
-            <p className="mt-2 text-xs text-ink-3">
-              第一张卡当前状态：{cards[0].status}
-            </p>
-          </div>
+          <FlashCardDeck cards={cards} onUpdateStatus={handleUpdateStatus} />
         </section>
       </div>
     </div>
