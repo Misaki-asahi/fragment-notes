@@ -5,6 +5,7 @@ import type { StudyDeck } from "../../types/deck";
 import { FlashCardDeck } from "./FlashCardDeck";
 import { ConceptMatrix } from "./ConceptMatrix";
 import { WrongBookView, type WrongItem } from "./WrongBookView";
+import { FocusTimerBar } from "./FocusTimerBar";
 
 const deck = sampleDecks[0];
 
@@ -63,6 +64,8 @@ export function RookiePreview() {
           </div>
           <ThemeToggle />
         </header>
+
+        <FocusTimerBar />
 
         <section className="edge-glow p-6">
           <span className="rounded-sm bg-surface px-2.5 py-1 text-xs font-bold text-accent">
