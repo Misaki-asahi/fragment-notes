@@ -174,7 +174,7 @@ function App() {
 
   if (workspaceOpen) {
     return (
-      <div className="min-h-screen">
+      <div className="site-shell min-h-screen">
         <header className="border-b border-edge bg-surface/50 px-6 py-4 backdrop-blur-sm">
           <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
             <a href="#top" className="inline-flex items-center gap-2 text-sm font-bold text-accent transition hover:opacity-80">
@@ -194,7 +194,7 @@ function App() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-x-clip">
+    <div className="site-shell relative min-h-screen overflow-x-clip">
       <img
         src="/wave.svg"
         alt=""
@@ -234,7 +234,7 @@ function App() {
           <div className="max-w-xl">
             <h1
               className="typewriter mx-auto py-6 text-4xl font-bold"
-              style={{ fontSize: "clamp(24px, 5vw, 36px)", ["--chars" as string]: HERO.title.length }}
+              style={{ fontSize: "calc(clamp(24px, 5vw, 36px) * var(--site-type, 1))", ["--chars" as string]: HERO.title.length }}
             >
               {HERO.title}
             </h1>

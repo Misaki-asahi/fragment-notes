@@ -105,7 +105,7 @@ interface StudyDeck {
 
 硬性规则：
 1. 只输出一个合法 JSON 对象。不要 markdown 代码块、不要注释、不要任何 JSON 之外的文字。
-2. flashcards 必须 6~10 张；quizzes 必须 4~6 道；每道题 options 恰好 4 个字符串，answerIndex 为 0~3 的整数。
+2. flashcards 必须 6~10 张；quizzes 必须 4~6 道，绝不允许空数组（资料再短也要出 4 道概念辨析题）；每道题 options 恰好 4 个字符串，answerIndex 为 0~3 的整数。createdAt 必须是纯数字毫秒时间戳，禁止写 new Date() 等表达式。
 3. concepts 4~8 个；confusions 1~3 组（资料中确实存在易混点才输出，没有就给空数组）。
 4. plainExplanation 是核心特色：用生活类比的大白话讲清原理，像给室友讲题，禁止术语堆砌，每道题都要有且与 standardExplanation 不同。
 5. 忠于原材料：只提炼资料中出现或可直接推出的知识点，绝不编造资料之外的内容；资料太短宁可少出几张卡。
@@ -154,8 +154,10 @@ async function callGlmOnce(model: GlmModel, messages: GlmMessage[], apiKey: stri
     if (res.status === 429) throw new GlmError('upstream_busy', true);
     if (res.status >= 500) throw new GlmError('upstream_error', true);
     if (!res.ok) throw new GlmError('upstream_error', false);
-    const data = (await res.json()) as { choices?: { message?: { content?: string } }[] } | null;
+    const data = (await res.json()) as { choices?: { message?: { content?: string }; finish_reason?: string }[]; error?: { code?: string } } | null;
     const content = data?.choices?.[0]?.message?.content;
+    // 仅状态码/长度/错误码，不含密钥与正文，供云端出口差异排查
+    console.info(`[glm] model=${model} status=${res.status} finish=${data?.choices?.[0]?.finish_reason ?? '-'} chars=${typeof content === 'string' ? content.length : -1} upstreamCode=${data?.error?.code ?? '-'}`);
     if (typeof content !== 'string') throw new GlmError('bad_output', true);
     const answer = content
       .replace(/<think>[\s\S]*?(<\/think>|$)/g, '')
@@ -230,6 +232,8 @@ function extractJson(raw: string): unknown {
   let s = raw.trim();
   const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
   if (fence) s = fence[1].trim();
+  // 模型偶尔把 JS 时间表达式写进 JSON；createdAt 由服务端覆盖，替换为占位数字
+  s = s.replace(/(:\s*)(?:new\s+Date\(\)\.getTime\(\)|Date\.now\(\))\s*(?=[,}\]])/g, '$10');
   const end = s.lastIndexOf('}');
   if (end === -1) throw new GlmError('bad_output', true);
   for (let start = s.indexOf('{'); start !== -1 && start < end; start = s.indexOf('{', start + 1)) {
@@ -265,6 +269,23 @@ function alignNumericAnswer(options: string[], answerIndex: number, explanation:
   if (result === null) return answerIndex;
   const matches = values.flatMap((v, i) => (Math.abs((v as number) - result) < 1e-9 ? [i] : []));
   return matches.length === 1 ? matches[0] : -1;
+}
+
+// 符号表达式选项：以解析最后一个等号后的结果核对选项，完全对不上则判坏题；
+// 允许选项以该结果结尾（如解析得 Ω、选项为 A∪B=Ω），避免误杀。
+function alignSymbolicAnswer(options: string[], answerIndex: number, explanation: string): number {
+  const eq = explanation.lastIndexOf('=');
+  if (eq === -1) return answerIndex;
+  const norm = (s: string) => s.replace(/\s+/g, '');
+  const tail = norm(explanation.slice(eq + 1).replace(/[。；;，,]+$/g, ''));
+  if (tail === '') return answerIndex;
+  const matches = options.flatMap((op, i) => {
+    const n = norm(op);
+    return n === tail || n.endsWith(tail) || tail.endsWith(n) ? [i] : [];
+  });
+  if (matches.length === 1) return matches[0];
+  if (matches.length === 0) return -1;
+  return answerIndex;
 }
 
 // 模型常把正确答案固定放在 A 位；重排选项防止按位置猜题。
@@ -321,7 +342,10 @@ function normalizeDeck(raw: unknown): Record<string, unknown> {
       const options = (Array.isArray(q.options) ? q.options : []).map((op) => asString(op));
       const standardExplanation = asString(q.standardExplanation);
       const rawIndex = Number.isInteger(q.answerIndex) ? Number(q.answerIndex) : -1;
-      const answerIndex = rawIndex >= 0 && rawIndex < 4 && options.length === 4 ? alignNumericAnswer(options, rawIndex, standardExplanation) : -1;
+      let answerIndex = rawIndex >= 0 && rawIndex < 4 && options.length === 4 ? alignNumericAnswer(options, rawIndex, standardExplanation) : -1;
+      if (answerIndex >= 0 && options.every((op) => numericValue(op) === null)) {
+        answerIndex = alignSymbolicAnswer(options, answerIndex, standardExplanation);
+      }
       return {
         id: `q${i + 1}`,
         question: asString(q.question),
@@ -427,7 +451,12 @@ async function handleGenerateDeck(req: Request, apiKey: string): Promise<Respons
 
   const { deck, model } = await withRetry(async () => {
     const result = await callGlm(messages, apiKey, DECK_TIMEOUT_MS, 8000);
-    return { deck: normalizeDeck(extractJson(result.text)), model: result.model };
+    try {
+      return { deck: normalizeDeck(extractJson(result.text)), model: result.model };
+    } catch (e) {
+      console.info(`[deck] parse-fail chars=${result.text.length} head=${JSON.stringify(result.text.slice(0, 160))} tail=${JSON.stringify(result.text.slice(-160))}`);
+      throw e;
+    }
   });
   return json({ ok: true, deck, model });
 }
