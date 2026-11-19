@@ -51,15 +51,17 @@ function BreathingOverlay({ onClose }: { onClose: () => void }) {
         </button>
         <style>{`@keyframes rookie-breathe{0%,100%{transform:scale(0.72);opacity:0.65}50%{transform:scale(1.12);opacity:1}}`}</style>
         <div
-          className="mx-auto flex h-32 w-32 items-center justify-center rounded-full"
+          className="mx-auto h-32 w-32 rounded-full"
           style={{
             background: "radial-gradient(circle at 50% 45%, var(--accent), var(--accent-3))",
             animation: "rookie-breathe 8s ease-in-out infinite",
           }}
-        >
-          <span className="text-lg font-bold text-ink">{inhale ? "吸气…" : "呼气…"}</span>
-        </div>
-        <p className="mt-6 font-bold">当下稳稳记住就好</p>
+          aria-hidden="true"
+        />
+        <p className="mt-6 text-xl font-bold text-accent" aria-live="polite">
+          {inhale ? "吸气…" : "呼气…"}
+        </p>
+        <p className="mt-2 font-bold">当下稳稳记住就好</p>
         <p className="mt-2 text-xs font-bold text-ink-3">{Math.max(left, 0)} 秒后自动关闭 · 可随时点 ✕ 离开</p>
       </div>
     </div>
