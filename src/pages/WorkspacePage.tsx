@@ -41,7 +41,7 @@ function errorHint(e: DeckApiError): string | null {
         ? "本地开发：确认转发服务已启动（node dev/dev-server.ts，端口 8000）"
         : "检查网络连接后重试";
     case "service_not_configured":
-      return "后端尚未配置 AI_API_KEY，请找 A 在 Sites 后台填入 Secret";
+      return "后端尚未配置 AI_API_KEY，请联系站点管理员在 Sites Settings 填入 Secret";
     case "auth_error":
       return "API Key 无效或已过期，请检查密钥配置";
     case "rate_limited":
