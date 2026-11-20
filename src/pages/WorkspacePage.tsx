@@ -6,17 +6,18 @@ import {
   History,
   Layers,
   ListChecks,
-  Loader2,
   RotateCcw,
-  Sparkles,
   Timer,
-  Trash2,
 } from "lucide-react";
 import { UploadZone } from "../components/core/UploadZone";
 import { LoadingSkeleton } from "../components/core/LoadingSkeleton";
 import { HistoryDrawer } from "../components/core/HistoryDrawer";
+import { ConceptMatrix } from "../components/rookie/ConceptMatrix";
+import { FlashCardDeck } from "../components/rookie/FlashCardDeck";
+import { WrongBookView } from "../components/rookie/WrongBookView";
+import { FocusTimerBar } from "../components/rookie/FocusTimerBar";
 import { useDeckStore, addDeck, selectDeck, deleteDeck, updateCardStatus, removeWrong, appendAnalogy } from "../store/useDeckStore";
-import type { CardStatus, WrongItem } from "../store/useDeckStore";
+import type { WrongItem } from "../store/useDeckStore";
 import { generateDeck } from "../api/generateDeck";
 import type { DeckPayload } from "../api/generateDeck";
 import { requestAnalogy } from "../api/analogy";
@@ -32,12 +33,6 @@ const TABS: { key: TabKey; label: string; icon: typeof BookOpen }[] = [
   { key: "wrong", label: "大白话错题本", icon: ListChecks },
   { key: "focus", label: "专注计时", icon: Timer },
 ];
-
-const STATUS_LABEL: Record<CardStatus, string> = {
-  unseen: "未看",
-  review: "复习中",
-  mastered: "已掌握",
-};
 
 function errorHint(e: DeckApiError): string | null {
   switch (e.code) {
@@ -259,88 +254,28 @@ function DeckWorkspace({
       </div>
 
       <div className="mt-6">
-        {tab === "concepts" && <ConceptsPlaceholder deck={deck} />}
-        {tab === "cards" && <CardsTempView deck={deck} />}
-        {tab === "wrong" && <WrongTempView wrongItems={wrongItems} onRetry={onRetry} />}
-        {tab === "focus" && <FocusPlaceholder />}
+        {tab === "concepts" && (
+          <ConceptMatrix summary={deck.sourceSummary} concepts={deck.concepts} confusions={deck.confusions} />
+        )}
+        {tab === "cards" && (
+          <FlashCardDeck cards={deck.flashcards} onUpdateStatus={(id, status) => updateCardStatus(id, status)} />
+        )}
+        {tab === "wrong" && <WrongTab wrongItems={wrongItems} onRetry={onRetry} />}
+        {tab === "focus" && <FocusTimerBar />}
       </div>
     </section>
   );
 }
 
-// C 的 ConceptMatrix 未就绪：占位块只展示真实切片概况，不写死假数据。
-function ConceptsPlaceholder({ deck }: { deck: StudyDeck }) {
-  return (
-    <div className="border border-dashed border-edge-2 p-5">
-      <p className="kicker">ConceptMatrix · C 组件待接入</p>
-      <p className="mt-3 text-sm leading-relaxed text-ink-2">
-        已备好 Props：concepts {deck.concepts.length} 条、confusions {deck.confusions.length} 组。
-        组件就绪后在此挂载，展示概念定义与易混点对比。
-      </p>
-      <ul className="mt-4 space-y-1.5 font-mono text-[11px] tracking-wider text-ink-3">
-        {deck.concepts.map((c) => (
-          <li key={c.term}>· {c.term}</li>
-        ))}
-        {deck.confusions.map((c) => (
-          <li key={c.topic}>· 易混：{c.topic}</li>
-        ))}
-      </ul>
-    </div>
-  );
-}
+// 集成层：C 的 WrongBookView 按契约只收 onRemove/onAskMoreAnalogy；
+// 「重做此题」与比喻失败提示属于业务闭环，由集成层补齐，不改 rookie 组件。
+function WrongTab({ wrongItems, onRetry }: { wrongItems: WrongItem[]; onRetry: (item: WrongItem) => void }) {
+  const [analogyErr, setAnalogyErr] = useState<string | null>(null);
 
-// C 的 FlashCardDeck 未就绪：真数据临时列表，保证掌握度闭环可验收。
-function CardsTempView({ deck }: { deck: StudyDeck }) {
-  return (
-    <div>
-      <p className="kicker">FlashCardDeck · C 组件待接入（临时视图）</p>
-      <ul className="mt-4 space-y-3">
-        {deck.flashcards.map((card) => (
-          <li key={card.id} className="border border-edge p-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold leading-snug text-ink">{card.front}</p>
-                <p className="mt-1.5 text-sm leading-relaxed text-ink-2">{card.back}</p>
-              </div>
-              <span className="shrink-0 border border-edge px-2 py-0.5 font-mono text-[10px] tracking-wider text-ink-3">
-                {card.difficulty}
-              </span>
-            </div>
-            <div className="mt-3 flex gap-2">
-              {(Object.keys(STATUS_LABEL) as CardStatus[]).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => updateCardStatus(card.id, s)}
-                  className={`border px-3 py-1 font-mono text-[11px] tracking-wider transition-colors ${
-                    card.status === s
-                      ? s === "mastered"
-                        ? "border-ok text-ok"
-                        : s === "review"
-                          ? "border-warn text-warn"
-                          : "border-accent text-accent"
-                      : "border-edge text-ink-3 hover:border-edge-2 hover:text-ink-2"
-                  }`}
-                >
-                  {STATUS_LABEL[s]}
-                </button>
-              ))}
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-// C 的 WrongBookView 未就绪：真数据临时视图，含「换个生活比喻」联动。
-function WrongTempView({ wrongItems, onRetry }: { wrongItems: WrongItem[]; onRetry: (item: WrongItem) => void }) {
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [errId, setErrId] = useState<string | null>(null);
-
-  async function newAnalogy(item: WrongItem) {
-    setBusyId(item.id);
-    setErrId(null);
+  async function askAnalogy(id: string) {
+    const item = wrongItems.find((w) => w.id === id);
+    if (!item) return;
+    setAnalogyErr(null);
     try {
       const last = item.customAnalogies?.[item.customAnalogies.length - 1];
       const text = await requestAnalogy({
@@ -350,88 +285,36 @@ function WrongTempView({ wrongItems, onRetry }: { wrongItems: WrongItem[]; onRet
         userChoiceIndex: item.userChoiceIndex,
         plainExplanation: last ?? item.quiz.plainExplanation,
       });
-      appendAnalogy(item.id, text);
+      appendAnalogy(id, text);
     } catch {
-      setErrId(item.id);
-    } finally {
-      setBusyId(null);
+      setAnalogyErr(item.quiz.question);
     }
   }
 
-  if (wrongItems.length === 0) {
-    return (
-      <div className="border border-dashed border-edge-2 p-5">
-        <p className="kicker">WrongBookView · C 组件待接入（临时视图）</p>
-        <p className="mt-3 text-sm text-ink-2">
-          错题本还是空的——完成一次 3 分钟小测，答错的题会自动收进来。
+  return (
+    <div className="flex flex-col gap-4">
+      {analogyErr && (
+        <p role="alert" className="border border-bad p-3 text-sm text-bad">
+          比喻生成失败，请稍后再试：{analogyErr}
         </p>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <p className="kicker">WrongBookView · C 组件待接入（临时视图）</p>
-      <ul className="mt-4 space-y-4">
-        {wrongItems.map((item) => (
-          <li key={item.id} className="border border-edge p-4">
-            <p className="font-mono text-[10px] tracking-wider text-ink-3">{item.deckTitle}</p>
-            <p className="mt-1.5 text-sm font-semibold leading-snug text-ink">{item.quiz.question}</p>
-            <p className="mt-2 text-xs leading-relaxed text-ink-2">
-              你的错选：
-              <span className="text-bad">{item.quiz.options[item.userChoiceIndex] ?? "未作答"}</span>
-              {" · "}正确答案：
-              <span className="text-ok">{item.quiz.options[item.quiz.answerIndex]}</span>
-            </p>
-            <p className="mt-2 text-sm leading-relaxed text-ink-2">{item.quiz.plainExplanation}</p>
-            {item.customAnalogies?.map((a, i) => (
-              <p key={i} className="mt-2 border-l-2 border-gold pl-3 text-sm leading-relaxed text-gold">
-                {a}
-              </p>
-            ))}
-            {errId === item.id && (
-              <p className="mt-2 text-xs text-bad">比喻生成失败，请稍后再试</p>
-            )}
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" onClick={() => onRetry(item)} className="inline-flex items-center gap-1.5 border border-edge px-3 py-1 font-mono text-[11px] text-ink-2 hover:border-accent">
-                <RotateCcw className="h-3 w-3" />重做此题
-              </button>
-              <button
-                type="button"
-                onClick={() => void newAnalogy(item)}
-                disabled={busyId !== null}
-                className="inline-flex items-center gap-1.5 border border-edge px-3 py-1 font-mono text-[11px] tracking-wider text-ink-2 transition-colors hover:border-accent-2 hover:text-ink disabled:opacity-50"
-              >
-                {busyId === item.id ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <Sparkles className="h-3 w-3" />
-                )}
-                换个生活比喻
-              </button>
-              <button
-                type="button"
-                onClick={() => removeWrong(item.id)}
-                className="inline-flex items-center gap-1.5 border border-edge px-3 py-1 font-mono text-[11px] tracking-wider text-ink-3 transition-colors hover:border-bad hover:text-bad"
-              >
-                <Trash2 className="h-3 w-3" />
-                移出错题本
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function FocusPlaceholder() {
-  return (
-    <div className="border border-dashed border-edge-2 p-5">
-      <p className="kicker">FocusTimerBar · C 组件待接入</p>
-      <p className="mt-3 text-sm leading-relaxed text-ink-2">
-        专注计时条组件就绪后在此挂载（Props：当前牌组学习时长统计回调）。
-      </p>
+      )}
+      {wrongItems.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-mono text-[11px] tracking-wider text-ink-3">重做此题：</span>
+          {wrongItems.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onRetry(item)}
+              className="inline-flex items-center gap-1.5 border border-edge px-3 py-1 font-mono text-[11px] text-ink-2 transition-colors hover:border-accent hover:text-ink"
+            >
+              <RotateCcw className="h-3 w-3" />
+              {item.quiz.question.slice(0, 14)}…
+            </button>
+          ))}
+        </div>
+      )}
+      <WrongBookView wrongItems={wrongItems} onRemove={removeWrong} onAskMoreAnalogy={askAnalogy} />
     </div>
   );
 }
