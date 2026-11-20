@@ -38,7 +38,7 @@ function errorHint(e: DeckApiError): string | null {
   switch (e.code) {
     case "network":
       return import.meta.env.DEV
-        ? "本地开发：确认转发服务已启动（node api/dev-server.ts，端口 8000）"
+        ? "本地开发：确认转发服务已启动（node dev/dev-server.ts，端口 8000）"
         : "检查网络连接后重试";
     case "service_not_configured":
       return "后端尚未配置 AI_API_KEY，请找 A 在 Sites 后台填入 Secret";
