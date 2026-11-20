@@ -1,10 +1,10 @@
-// 本地联调服务器（仅开发用，不参与部署打包）。
-// 用法：node api/dev-server.ts  → http://127.0.0.1:8000
+// 本地联调服务器（仅开发用，不参与部署打包；置于 dev/ 以排除出 Function 包）。
+// 用法：node dev/dev-server.ts  → http://127.0.0.1:8000
 // 前端 dev 模式直连本服务（CORS），生产走同源 /functions/v1/app/*。
 // Key 优先读环境变量 AI_API_KEY（启动时注入），其次仓库根 .env；不打印任何密钥。
 import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
-import { handleRequest } from './generate-deck.ts';
+import { handleRequest } from '../api/generate-deck.ts';
 
 function loadEnv(): Record<string, string> {
   const env: Record<string, string> = {};
