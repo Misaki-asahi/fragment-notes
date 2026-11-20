@@ -1,5 +1,6 @@
 import {
   ArrowDown,
+  ArrowLeft,
   ArrowRight,
   BookOpen,
   FileText,
@@ -11,11 +12,15 @@ import {
   Timer,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { FAQ, FEATURES, HERO, NAV } from "./content";
 import { sampleDecks } from "./mock/sampleDecks";
 import type { StudyDeck } from "./types/deck";
+
+const WorkspacePage = lazy(() =>
+  import("./pages/WorkspacePage").then((module) => ({ default: module.WorkspacePage })),
+);
 
 const FEATURE_ICONS: Record<string, typeof FileText> = {
   file: FileText,
@@ -109,7 +114,11 @@ function DeckModal({ deck, onClose }: { deck: StudyDeck; onClose: () => void }) 
             <p className="mt-1 text-sm leading-relaxed text-ink-2">{f.back}</p>
           </div>
         ))}
-        <p className="mt-5 text-xs text-ink-3">完整 3D 翻卡、随堂小测与错题本交互即将上线。</p>
+        <p className="mt-5 text-xs text-ink-3">
+          3D 翻卡仍在完善；随堂小测与错题本可在
+          <a href="#workspace" className="text-accent underline transition hover:opacity-80">学习工作台</a>
+          体验。
+        </p>
       </div>
     </div>
   );
@@ -118,8 +127,23 @@ function DeckModal({ deck, onClose }: { deck: StudyDeck; onClose: () => void }) 
 function App() {
   const [active, setActive] = useState("decks");
   const [selected, setSelected] = useState<StudyDeck | null>(null);
+  const [workspaceOpen, setWorkspaceOpen] = useState(() => window.location.hash === "#workspace");
 
   useEffect(() => {
+    const onHashChange = () => {
+      setWorkspaceOpen(window.location.hash === "#workspace");
+      setSelected(null);
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
+  useEffect(() => {
+    if (workspaceOpen) {
+      window.scrollTo({ top: 0, behavior: "instant" });
+      return;
+    }
+    document.getElementById(window.location.hash.slice(1) || "top")?.scrollIntoView({ behavior: "instant" });
     const spy = new IntersectionObserver(
       (entries) => {
         for (const e of entries) if (e.isIntersecting) setActive(e.target.id);
@@ -146,10 +170,31 @@ function App() {
       spy.disconnect();
       reveal.disconnect();
     };
-  }, []);
+  }, [workspaceOpen]);
+
+  if (workspaceOpen) {
+    return (
+      <div className="site-shell min-h-screen">
+        <header className="border-b border-edge bg-surface/50 px-6 py-4 backdrop-blur-sm">
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
+            <a href="#top" className="inline-flex items-center gap-2 text-sm font-bold text-accent transition hover:opacity-80">
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+              返回首页
+            </a>
+            <ThemeToggle />
+          </div>
+        </header>
+        <main>
+          <Suspense fallback={<p role="status" className="p-6 text-center text-ink-2">正在加载学习工作台…</p>}>
+            <WorkspacePage />
+          </Suspense>
+        </main>
+      </div>
+    );
+  }
 
   return (
-    <div className="relative min-h-screen overflow-x-clip">
+    <div className="site-shell relative min-h-screen overflow-x-clip">
       <img
         src="/wave.svg"
         alt=""
@@ -189,13 +234,17 @@ function App() {
           <div className="max-w-xl">
             <h1
               className="typewriter mx-auto py-6 text-4xl font-bold"
-              style={{ fontSize: "clamp(24px, 5vw, 36px)", ["--chars" as string]: HERO.title.length }}
+              style={{ fontSize: "calc(clamp(24px, 5vw, 36px) * var(--site-type, 1))", ["--chars" as string]: HERO.title.length }}
             >
               {HERO.title}
             </h1>
             <p className="text-lg leading-relaxed text-ink-2">{HERO.sub}</p>
             <div className="flex flex-wrap items-center justify-center gap-6 pt-12">
-              <a href="#decks" className="btn-primary">
+              <a href="#workspace" className="btn-primary">
+                进入学习工作台
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </a>
+              <a href="#decks" className="inline-flex items-center gap-2 font-bold text-accent transition hover:opacity-80">
                 {HERO.cta}
                 <ArrowDown className="h-4 w-4" />
               </a>
