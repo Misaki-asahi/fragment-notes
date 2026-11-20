@@ -238,7 +238,7 @@
               return '<div class="sf-conf"><p class="t">' + c.topic + '</p><div class="sf-conf-grid"><div><b>' + c.itemAName + "</b><p>" + c.itemAFeature + "</p></div><div><b>" + c.itemBName + "</b><p>" + c.itemBFeature + '</p></div></div><p class="sf-tip">' + c.distinctionTip + "</p></div>";
             }).join("") +
             "<h4>闪卡预览</h4>" + d.flashcards.map(function (f) { return '<div class="sf-fc"><b>' + f.front + "</b><p>" + f.back + "</p></div>"; }).join("") +
-            '<p class="soon">完整 3D 翻卡、随堂小测与错题本交互即将上线。</p></div>';
+            '<p class="soon">本页为离线示例展示；3D 翻卡、小测与错题本完整交互请运行 npm run dev 或访问线上部署。</p></div>';
           scrim.querySelector(".sf-scrim-bg").addEventListener("click", closeModal);
           scrim.querySelector(".sf-close").addEventListener("click", closeModal);
           document.body.appendChild(scrim);

@@ -115,9 +115,9 @@ function DeckModal({ deck, onClose }: { deck: StudyDeck; onClose: () => void }) 
           </div>
         ))}
         <p className="mt-5 text-xs text-ink-3">
-          3D 翻卡仍在完善；随堂小测与错题本可在
+          3D 翻卡、随堂小测与大白话错题本已在
           <a href="#workspace" className="text-accent underline transition hover:opacity-80">学习工作台</a>
-          体验。
+          上线，进去即可体验完整闭环。
         </p>
       </div>
     </div>
