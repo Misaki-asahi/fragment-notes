@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>碎片笔记 · 本地合并版更新介绍</title>
+<style>
+  :root{
+    --void:#0d0620; --surface:#140a2e; --surface2:#301b66; --edge:#483775; --edge2:#6b54a8;
+    --ink:#f8f5ff; --ink2:#c9bfe6; --ink3:#8f83b8;
+    --accent:#9b77ff; --accent2:#7e4fff; --accent3:#4413cb;
+    --gold:#f5c04e; --ok:#4ade80; --warn:#fbbf24; --bad:#f87171; --info:#60a5fa;
+  }
+  [data-theme="light"]{
+    --void:#f8f5ff; --surface:#ffffff; --surface2:#ede7ff; --edge:#d4c8f2; --edge2:#b3a1e6;
+    --ink:#140a2e; --ink2:#4a3a75; --ink3:#7a6ba3;
+    --accent:#4413cb; --accent2:#5b2ee0; --accent3:#4413cb;
+    --gold:#a16207; --ok:#15803d; --warn:#b45309; --bad:#b91c1c; --info:#1d4ed8;
+  }
+  *{box-sizing:border-box;margin:0}
+  html{scroll-behavior:auto}
+  body{
+    background:var(--void);color:var(--ink);
+    font-family:"Lato","Noto Sans SC","Microsoft YaHei",system-ui,sans-serif;
+    line-height:1.7;min-height:100vh;transition:background .3s,color .3s;
+  }
+  ::selection{background:var(--accent2);color:#fff}
+  ::-webkit-scrollbar{width:10px}
+  ::-webkit-scrollbar-track{background:var(--surface)}
+  ::-webkit-scrollbar-thumb{background:var(--edge);border-radius:5px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--accent2)}
+  .wrap{max-width:960px;margin:0 auto;padding:0 20px}
+  header.top{
+    position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--surface) 82%,transparent);
+    backdrop-filter:blur(8px);border-bottom:1px solid var(--edge);
+  }
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0}
+  .brand{font-weight:900;letter-spacing:.05em}
+  .brand small{display:block;font-weight:700;font-size:11px;color:var(--ink3);letter-spacing:.12em}
+  .topnav{display:flex;gap:14px;align-items:center;font-size:13px;font-weight:700}
+  .topnav a{color:var(--ink2);text-decoration:none;transition:color .2s}
+  .topnav a:hover{color:var(--accent)}
+  #themeBtn{
+    border:1px solid var(--edge);background:var(--surface);color:var(--ink);
+    border-radius:8px;padding:7px 12px;font-size:13px;font-weight:700;cursor:pointer;transition:border-color .2s;
+  }
+  #themeBtn:hover{border-color:var(--accent)}
+  .hero{padding:56px 0 30px;position:relative}
+  .hero::before{
+    content:"";position:absolute;inset:-40px -20px auto;height:340px;pointer-events:none;z-index:-1;
+    background:radial-gradient(600px 260px at 30% 20%,color-mix(in srgb,var(--accent2) 26%,transparent),transparent 70%),
+               radial-gradient(500px 240px at 80% 0%,color-mix(in srgb,var(--accent3) 20%,transparent),transparent 70%);
+  }
+  .kicker{font-size:13px;font-weight:900;letter-spacing:.2em;color:var(--accent)}
+  h1{font-size:clamp(26px,5vw,38px);font-weight:900;margin:10px 0 12px;line-height:1.3}
+  .lede{color:var(--ink2);max-width:640px}
+  .badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+  .badge{
+    font-size:12px;font-weight:700;padding:4px 12px;border-radius:999px;
+    border:1px solid var(--edge);background:var(--surface);color:var(--ink2);
+  }
+  .badge.hot{border-color:var(--accent2);color:var(--accent)}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:30px 0 8px}
+  .stat{
+    background:var(--surface);border:1px solid var(--edge);border-radius:10px;padding:18px 16px;
+    transition:transform .2s,border-color .2s;
+  }
+  .stat:hover{transform:translateY(-3px);border-color:var(--edge2)}
+  .stat b{display:block;font-size:30px;font-weight:900;color:var(--accent);line-height:1.2}
+  .stat span{font-size:12px;font-weight:700;color:var(--ink3)}
+  section{padding:34px 0 6px;scroll-margin-top:90px}
+  h2{font-size:22px;font-weight:900;margin:6px 0 4px}
+  .rule{height:2px;width:64px;background:linear-gradient(90deg,var(--accent),var(--accent3));border-radius:2px;margin:10px 0 20px}
+  .card{
+    background:var(--surface);border:1px solid var(--edge);border-radius:10px;padding:20px;margin-bottom:14px;
+    transition:border-color .2s;
+  }
+  .card:hover{border-color:var(--edge2)}
+  .card h3{font-size:16px;font-weight:900;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .tag{font-size:11px;font-weight:900;padding:2px 9px;border-radius:6px;background:var(--surface2);color:var(--accent);letter-spacing:.06em}
+  .card p{color:var(--ink2);font-size:14px;margin-top:8px}
+  .files{margin-top:12px;display:flex;flex-wrap:wrap;gap:6px}
+  .file{
+    font-family:ui-monospace,Consolas,monospace;font-size:12px;padding:3px 9px;border-radius:6px;
+    background:var(--surface2);color:var(--ink2);border:1px solid var(--edge);
+  }
+  .file em{font-style:normal;color:var(--ink3)}
+  ul.tight{margin:10px 0 0 18px;color:var(--ink2);font-size:14px}
+  ul.tight li{margin:4px 0}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:640px){.grid2{grid-template-columns:1fr}.topnav a{display:none}}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--edge);vertical-align:top}
+  th{color:var(--ink3);font-size:12px;letter-spacing:.08em}
+  td.ok{color:var(--ok);font-weight:700;white-space:nowrap}
+  code{font-family:ui-monospace,Consolas,monospace;font-size:.92em;background:var(--surface2);padding:1px 6px;border-radius:5px}
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:14px;font-size:13px;font-weight:700}
+  .flow .step{background:var(--surface2);border:1px solid var(--edge);border-radius:8px;padding:7px 13px;color:var(--ink)}
+  .flow .arr{color:var(--accent)}
+  .note{border-left:3px solid var(--warn);background:var(--surface);padding:12px 16px;border-radius:0 8px 8px 0;font-size:13px;color:var(--ink2);margin-top:14px}
+  .note.ok{border-left-color:var(--ok)}
+  .shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:14px}
+  .shots figure{background:var(--surface);border:1px solid var(--edge);border-radius:10px;overflow:hidden}
+  .shots img{width:100%;display:block;border-bottom:1px solid var(--edge)}
+  .shots figcaption{font-size:12px;font-weight:700;color:var(--ink3);padding:8px 12px}
+  footer{margin-top:44px;border-top:1px solid var(--edge);padding:22px 0 34px;font-size:12px;color:var(--ink3)}
+  footer a{color:var(--accent);font-weight:700}
+  .reveal{opacity:0;transform:translateY(14px);transition:opacity .5s,transform .5s}
+  .reveal.on{opacity:1;transform:none}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}.reveal{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap topbar">
+    <div class="brand">碎片笔记<small>VERSION UPDATE · 本地合并版</small></div>
+    <nav class="topnav">
+      <a href="#modules">新增模块</a>
+      <a href="#wiring">首页接线</a>
+      <a href="#verify">验证结果</a>
+      <a href="#pending">边界与待办</a>
+      <button id="themeBtn" type="button">切换浅色</button>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="hero">
+    <p class="kicker">CHANGELOG · 2026-11-18</p>
+    <h1>上游展示首页 × 角色 B 学习引擎<br>合并为可实际使用的本地最新版</h1>
+    <p class="lede">本次以 GitHub 上游 <code>main</code> 最新提交 <code>420548b</code>（zws.im 风格新首页）为基线，把此前完成的 B1–B5 全部本地成果合并进来，并按授权完成首页 → 学习工作台的最小接线。上游的视觉设计、内容系统与离线展示页全部保留。</p>
+    <div class="note">本页保留 2026-11-18 首次合并时的功能介绍、行数与验证统计，属于历史快照；后续真实笔记验收与修复见下方“11/19 补充记录”。代码与素材提交到功能分支不等于网站已上线，AI 内容仍需人工复核。</div>
+    <div class="badges">
+      <span class="badge hot">基线 420548b · feat/core-learning-flow</span>
+      <span class="badge">首次合并快照 · 2026-11-18</span>
+      <span class="badge">备份 stash 4d08e24 保留</span>
+      <span class="badge">零新增真实 AI 调用</span>
+    </div>
+    <div class="stats">
+      <div class="stat"><b>14</b><span>新增源码文件</span></div>
+      <div class="stat"><b>1961</b><span>新增源码行数</span></div>
+      <div class="stat"><b>101</b><span>通过检查（63 离线 + 38 浏览器）</span></div>
+      <div class="stat"><b>0</b><span>控制台错误 / 警告</span></div>
+    </div>
+  </div>
+
+  <section id="modules" class="reveal">
+    <p class="kicker">WHAT'S NEW</p>
+    <h2>新增模块：从“展示页”到“学习闭环”</h2>
+    <div class="rule"></div>
+    <p style="color:var(--ink2);font-size:14px">上游仓库此时只有首页展示与三套示例牌组预览；以下能力全部为本次本地新增，按任务编号分组。</p>
+
+    <div class="card" style="margin-top:16px">
+      <h3><span class="tag">B1</span>持久化状态仓库</h3>
+      <p>牌组、当前选择、错题本统一存入 localStorage，刷新不丢；完整嵌套校验，损坏缓存安全回退示例数据；写入失败（如配额满）给出可见提示而不崩溃。错题按「牌组 ID + 题目 ID」隔离，同名牌组互不串扰。</p>
+      <div class="files"><span class="file">src/store/useDeckStore.ts <em>170 行</em></span></div>
+    </div>
+
+    <div class="card">
+      <h3><span class="tag">B2</span>多源输入与解析</h3>
+      <p>粘贴提纲（16000 字上限）、拖拽/选择 JPG/PNG 照片（长边压至 1600px、透明底铺白）、PDF 课件（pdfjs 提取前 15 页、12000 字截断提示、扫描版引导改拍照）。三种输入统一为同一 payload；附加载骨架与历史牌组抽屉（原生 dialog，键盘可达、两步删除确认）。</p>
+      <div class="files">
+        <span class="file">src/utils/fileParser.ts <em>99 行</em></span>
+        <span class="file">src/components/core/UploadZone.tsx <em>185 行</em></span>
+        <span class="file">src/components/core/LoadingSkeleton.tsx <em>51 行</em></span>
+        <span class="file">src/components/core/HistoryDrawer.tsx <em>83 行</em></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3><span class="tag">B3</span>学习工作台</h3>
+      <p>上传 → 生成加载态 → 错误重试（断网/繁忙不白屏）→ 概念 / 闪卡 / 错题本 / 专注四个页签。闪卡可标记「未看 / 复习中 / 已掌握」；支持导出牌组 JSON。C 的正式组件未交付处保留明确占位，不写死假数据。</p>
+      <div class="files"><span class="file">src/pages/WorkspacePage.tsx <em>436 行</em></span></div>
+    </div>
+
+    <div class="card">
+      <h3><span class="tag">B4</span>3 分钟小测闭环</h3>
+      <p>180 秒倒计时（后台标签页按绝对截止时间校正）、4 选 1、超时自动交卷、自动判分；答错自动流入错题本，支持整套重做与单题重做，重做答对自动移出错题本。修复了快速切题/重复交卷的竞态。</p>
+      <div class="files"><span class="file">src/pages/QuizEngine.tsx <em>339 行</em></span></div>
+    </div>
+
+    <div class="card">
+      <h3><span class="tag">B5</span>AI 多模态解析引擎</h3>
+      <p>前端统一接口 → Serverless 转发层 → 智谱免费多模态 GLM-4.6V-Flash。Key 只从环境变量 <code>AI_API_KEY</code> 读取，绝不进前端；严格校验模型输出的 StudyDeck JSON（非法题目直接丢弃而非猜答案）；429 繁忙退避重试、超时控制、请求体 6.1MB 上限、单实例限流。错题本「换个生活比喻」走独立 analogy 接口。</p>
+      <div class="files">
+        <span class="file">api/generate-deck.ts <em>401 行</em></span>
+        <span class="file">api/index.ts <em>Deno 入口</em></span>
+        <span class="file">api/dev-server.ts <em>本地调试</em></span>
+        <span class="file">src/api/client.ts <em>56 行</em></span>
+        <span class="file">src/api/generateDeck.ts <em>14 行</em></span>
+        <span class="file">src/api/analogy.ts <em>16 行</em></span>
+        <span class="file">src/utils/deckValidation.ts <em>36 行</em></span>
+      </div>
+      <div class="flow">
+        <span class="step">提纲 / 照片 / PDF</span><span class="arr">→</span>
+        <span class="step">统一 payload</span><span class="arr">→</span>
+        <span class="step">Serverless 转发</span><span class="arr">→</span>
+        <span class="step">GLM-4.6V-Flash</span><span class="arr">→</span>
+        <span class="step">契约校验</span><span class="arr">→</span>
+        <span class="step">四件套牌组</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="wiring" class="reveal">
+    <p class="kicker">INTEGRATION</p>
+    <h2>对上游文件的最小改动</h2>
+    <div class="rule"></div>
+    <div class="grid2">
+      <div class="card">
+        <h3>src/App.tsx <span class="tag">+57 行</span></h3>
+        <ul class="tight">
+          <li>首页新增主按钮「进入学习工作台」，原「浏览示例牌组」保留为次级链接。</li>
+          <li>工作台按需懒加载（独立 chunk，首页不背 PDF 解析体积）。</li>
+          <li>hash 路由 <code>#workspace</code>：刷新直达、浏览器后退可回工作台。</li>
+          <li>工作台顶栏「返回首页」+ 主题切换；返回后首页滚动揭示动画正常重放。</li>
+          <li>牌组预览弹窗文案更新：小测与错题本已可在工作台体验（3D 翻卡仍待 C）。</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>依赖与其余文件</h3>
+        <ul class="tight">
+          <li><code>package.json</code> 仅新增 <code>pdfjs-dist@6.5.438</code>（B2 简报要求）；lock 相应更新，上游新字体依赖原样保留。</li>
+          <li>上游 <code>content.ts</code>、<code>index.css</code> 令牌、<code>index.html</code> 双模离线页、<code>vite.config.ts</code>、<code>main.tsx</code>：<b>零改动</b>。</li>
+          <li>契约 <code>types/deck.ts</code>、示例 <code>mock/</code>、C 的 <code>rookie/</code>：<b>零改动</b>，围栏完整。</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="verify" class="reveal">
+    <p class="kicker">VERIFICATION</p>
+    <h2>验证结果（全部实测通过）</h2>
+    <div class="rule"></div>
+    <table>
+      <tr><th>项目</th><th>结果</th><th>说明</th></tr>
+      <tr><td>TypeScript 严格编译 + 生产构建</td><td class="ok">通过</td><td>正式入口首次完整包含工作台，产物在 <code>latest-app-build/</code></td></tr>
+      <tr><td>oxlint</td><td class="ok">0 警告 0 错误</td><td>22 个文件</td></tr>
+      <tr><td>离线回归</td><td class="ok">63 / 63</td><td>状态仓库 21 项 + 转发层 42 项（含 429 重试、非法输出、体积上限等）</td></tr>
+      <tr><td>浏览器交互（开发入口）</td><td class="ok">30 / 30</td><td>进入/返回/后退/刷新、小测判分入错题本、历史抽屉、主题切换</td></tr>
+      <tr><td>浏览器交互（生产构建）</td><td class="ok">8 / 8</td><td>懒加载、真实 pdfjs worker 解析合成 PDF、模拟繁忙→重试成功</td></tr>
+      <tr><td>响应式 + 双主题</td><td class="ok">通过</td><td>375px 与 1024px 实测无横向溢出，深紫/浅色各截图核验</td></tr>
+      <tr><td>控制台</td><td class="ok">0 错误 0 警告</td><td>开发与生产两轮均干净</td></tr>
+    </table>
+    <div class="note">生产验证中的 AI 响应为浏览器内模拟接口（3 次），PDF 为现场构造的合法测试文件；<b>本轮未向智谱发起任何真实请求</b>，不产生费用。测试用的本地数据与 fetch 均已恢复原状。</div>
+    <div class="shots">
+      <figure><img src="latest-home-mobile-dark.png" alt="375px 深紫主题首页"><figcaption>首页 · 深紫 · 375px</figcaption></figure>
+      <figure><img src="latest-home-mobile-light.png" alt="375px 浅色主题首页"><figcaption>首页 · 浅色 · 375px</figcaption></figure>
+      <figure><img src="latest-workspace-mobile-dark.png" alt="375px 深紫主题工作台"><figcaption>工作台 · 深紫 · 375px</figcaption></figure>
+      <figure><img src="latest-workspace-mobile-light.png" alt="375px 浅色主题工作台"><figcaption>工作台 · 浅色 · 375px</figcaption></figure>
+    </div>
+  </section>
+
+  <section id="real-notes" class="reveal">
+    <p class="kicker">FOLLOW-UP · 2026-11-19</p>
+    <h2>11/19 补充记录：真实概率笔记验收</h2>
+    <div class="rule"></div>
+    <div class="card">
+      <h3>随提交附带的原始素材</h3>
+      <p>由笔记作者授权随代码上传；保留原图，仅将文件名改为对应页码。用于照片压缩、手写公式识别与生成质量回归，不作为 AI 答案正确性的保证。</p>
+      <div class="files">
+        <a class="file" href="../../../materials/probability-statistics/page-57.jpg">第 57 页 · 随机现象与样本空间</a>
+        <a class="file" href="../../../materials/probability-statistics/page-58.jpg">第 58 页 · 事件关系与运算</a>
+        <a class="file" href="../../../materials/probability-statistics/page-59.jpg">第 59 页 · 频率与概率公理</a>
+        <a class="file" href="../../../materials/probability-statistics/page-60.jpg">第 60 页 · 加法公式与容斥</a>
+      </div>
+    </div>
+    <div class="card">
+      <h3>本轮已加入的修复</h3>
+      <ul class="tight">
+        <li>主模型繁忙时切换到 GLM-4.1V-Thinking-Flash；响应返回所使用的模型名，清洗思考标记和泄漏草稿。</li>
+        <li>单次生成超时调为 90 秒，前端等待上限为 190 秒；恢复完整最终 JSON，并过滤解析自承待修正的题。</li>
+        <li>打乱普通题选项，同时保持答案映射；纯数值选项按解析末尾数字对齐，这是有限启发式，不是数学正确性验证。</li>
+        <li>提示词强化包含方向、唯一答案和整体补集括号写法，例如 (A∪B)ᶜ = Ā∩B̄。</li>
+      </ul>
+    </div>
+    <div class="note">首次真实上传第 57–59 页生成成功，第 60 页格式失败；修复后第 60 页真实重跑成功（约 38 秒、6 卡 4 题），但仍出现答案索引错误、解释写反和资料外概念。第 58 页第二次修正后重跑内容正确（约 34 秒、8 卡 2 题），题数仍低于目标。最新后端离线检查记录为 58 项通过；离线通过不代表每次 AI 生成内容正确。仍待真实 PDF、人工知识核验、C 正式组件接入及云端部署。</div>
+  </section>
+
+  <section id="pending" class="reveal">
+    <p class="kicker">BOUNDARIES & NEXT</p>
+    <h2>边界与待办</h2>
+    <div class="rule"></div>
+    <div class="grid2">
+      <div class="card">
+        <h3>本次刻意不做</h3>
+        <ul class="tight">
+          <li>首次合并时未提交、未推送；本次按作者授权提交至功能分支，后续团队审核与 <code>PR → dev</code> 合并另行进行，不直接改主分支。</li>
+          <li>不动 C 的组件沙盒与主题令牌；3D 翻卡等 C 交付后替换占位。</li>
+          <li>合并前的完整备份 stash <code>4d08e24</code> 保留，可随时回退。</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>接下来需要</h3>
+        <ul class="tight">
+          <li>你的真实物理笔记照片 / PDF / 提纲 → 过 11/19 链路门（真实 PDF 出 ≥5 张正确卡）。</li>
+          <li>免费模型高峰 429 拥堵恢复后做真实生成验收 + 物理内容人工核查。</li>
+          <li>A 在 Sites 后台配置 <code>AI_API_KEY</code> Secret 并部署；C 交付四个正式组件。</li>
+        </ul>
+      </div>
+    </div>
+    <div class="note ok">本地运行：安装依赖后运行 <code>npm run dev</code>；生成需要另行运行 <code>node api/dev-server.ts</code> 并在进程环境配置 <code>AI_API_KEY</code>。开发服务仅在运行时可访问，浏览器 localStorage 不跨 Edge 与 Qoder 共享。本提交不包含密钥、构建缓存或本机诊断文件。</div>
+  </section>
+
+  <footer>
+    碎片笔记 · Qoder 高校创造力大赛 StudyHack · 角色 B（席泽琛）本地合并版更新介绍 · 2026-11-18<br>
+    基线：<a href="https://github.com/Misaki-asahi/fragment-notes" target="_blank" rel="noreferrer">Misaki-asahi/fragment-notes</a> @ 420548b · HTML、截图及笔记素材使用仓库相对路径；完整下载仓库后双击本页即可离线查看。
+  </footer>
+</div>
+
+<script>
+  const btn=document.getElementById('themeBtn'),root=document.documentElement;
+  const saved=localStorage.getItem('fb-update-theme');
+  if(saved)root.dataset.theme=saved;
+  const sync=()=>btn.textContent=root.dataset.theme==='dark'?'切换浅色':'切换深紫';
+  sync();
+  btn.addEventListener('click',()=>{
+    root.dataset.theme=root.dataset.theme==='dark'?'light':'dark';
+    localStorage.setItem('fb-update-theme',root.dataset.theme);sync();
+  });
+  const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('on');io.unobserve(e.target);}}),{threshold:.08});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+  document.querySelectorAll('.topnav a[href^="#"]').forEach(a=>a.addEventListener('click',e=>{
+    e.preventDefault();
+    const target=document.getElementById(a.getAttribute('href').slice(1));
+    if(!target)return;
+    history.replaceState(null,'',a.getAttribute('href'));
+    target.scrollIntoView({behavior:'auto'});
+  }));
+</script>
+</body>
+</html>

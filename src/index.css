@@ -76,6 +76,9 @@
   }
   body {
     @apply bg-void font-sans text-ink antialiased;
+    background-color: var(--site-bg, var(--void));
+    color: var(--site-fg, var(--ink));
+    font-family: var(--site-font, var(--font-sans));
   }
 
   /* 主题化滚动条 */
@@ -178,6 +181,60 @@
       caret 0.9s step-end infinite;
   }
 }
+
+  .site-shell .edge-glow {
+    background-color: var(--site-surface, var(--surface-2));
+    border-color: var(--site-border, var(--edge));
+    border-radius: var(--site-radius, 6px);
+    transition-duration: calc(200ms * var(--site-motion, 1));
+  }
+  .site-shell .edge-glow:hover {
+    border-color: var(--site-border, var(--edge-2));
+  }
+  .site-shell .btn-primary {
+    background-color: var(--site-accent, var(--accent-3));
+    color: var(--site-on-accent, var(--ink));
+    border-radius: var(--site-radius, 4px);
+    transition-duration: calc(150ms * var(--site-motion, 1));
+  }
+  [data-theme="light"] .site-shell .btn-primary {
+    color: var(--site-on-accent, var(--void));
+  }
+  .site-shell .kicker,
+  .site-shell .text-accent {
+    color: var(--site-accent, var(--accent));
+  }
+  .site-shell .text-ink {
+    color: var(--site-fg, var(--ink));
+  }
+  .site-shell .text-ink-2 {
+    color: var(--site-muted, var(--ink-2));
+  }
+  .site-shell .font-sans,
+  .site-shell .font-display {
+    font-family: var(--site-font, var(--font-sans));
+  }
+  .site-shell main#top {
+    gap: calc(80px * var(--site-space, 1));
+    padding-inline: calc(16px * var(--site-space, 1));
+  }
+  .site-shell > main > .mx-auto {
+    padding-inline: calc(24px * var(--site-space, 1));
+  }
+  .site-shell h1.text-2xl {
+    font-size: calc(24px * var(--site-type, 1));
+  }
+  .site-shell .reveal {
+    transition-duration: calc(600ms * var(--site-motion, 1));
+  }
+  .site-shell .typewriter {
+    animation-duration: calc(2200ms * var(--site-motion, 1)), calc(900ms * var(--site-motion, 1));
+  }
+  @media (min-width: 768px) {
+    .site-shell main#top {
+      gap: calc(112px * var(--site-space, 1));
+    }
+  }
 
 @keyframes typing {
   to {
