@@ -32,7 +32,7 @@ export async function postApi<T>(path: string, body: unknown, timeoutMs: number)
     const byok = getByok();
     const payload =
       byok && isRecord(body)
-        ? { ...body, userKey: byok.key, ...(byok.model !== "auto" ? { model: byok.model } : {}) }
+        ? { ...body, userKey: byok.key, ...(byok.model !== "auto" ? { model: byok.model } : {}), ...(byok.endpoint !== "" ? { endpoint: byok.endpoint } : {}) }
         : body;
     const response = await fetch(`${BASE}/functions/v1/app${path}`, {
       method: "POST",

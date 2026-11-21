@@ -36,7 +36,6 @@ const GLM_ENDPOINT = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
 const GLM_MODELS = ['glm-4.6v-flash', 'glm-4.1v-thinking-flash'] as const;
 // BYOK 可选模型白名单（含付费档）；auto 不在其中，由客户端省略 model 字段表达
 const BYOK_MODELS = ['glm-4.6v-flash', 'glm-4.1v-thinking-flash', 'glm-4v-flash', 'glm-4v-plus', 'glm-4.5v', 'glm-4.6v'] as const;
-type GlmModel = (typeof GLM_MODELS)[number] | (typeof BYOK_MODELS)[number];
 // 老视觉模型不接受 thinking 参数；思考模型由其自身默认开启
 const THINKING_PARAM_MODELS: readonly string[] = ['glm-4.6v-flash', 'glm-4.5v', 'glm-4.6v'];
 const THINKING_EXTRA_TOKENS = 4000;
@@ -137,23 +136,25 @@ class GlmError extends Error {
   }
 }
 
-async function callGlmOnce(model: GlmModel, messages: GlmMessage[], apiKey: string, timeoutMs: number, maxTokens: number): Promise<string> {
+async function callGlmOnce(model: string, messages: GlmMessage[], apiKey: string, timeoutMs: number, maxTokens: number, endpoint: string | null = null): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
-  const thinkingModel = model === 'glm-4.1v-thinking-flash';
+  const thinkingModel = !endpoint && model === 'glm-4.1v-thinking-flash';
+  const url = endpoint ? (endpoint.endsWith('/chat/completions') ? endpoint : `${endpoint}/chat/completions`) : GLM_ENDPOINT;
   try {
-    const res = await fetch(GLM_ENDPOINT, {
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
         model,
         messages,
-        ...(model === 'glm-4.1v-thinking-flash' || !THINKING_PARAM_MODELS.includes(model) ? {} : { thinking: { type: 'disabled' } }),
+        ...(thinkingModel || endpoint || !THINKING_PARAM_MODELS.includes(model) ? {} : { thinking: { type: 'disabled' } }),
         temperature: 0.3,
         max_tokens: thinkingModel ? maxTokens + THINKING_EXTRA_TOKENS : maxTokens,
       }),
       signal: controller.signal,
     });
+    console.info(`[glm] model=${model} host=${new URL(url).host} status=${res.status}`);
     if (res.status === 401 || res.status === 403) throw new GlmError('auth_error', false);
     if (res.status === 429) throw new GlmError('upstream_busy', true);
     if (res.status >= 500) throw new GlmError('upstream_error', true);
@@ -177,8 +178,8 @@ async function callGlmOnce(model: GlmModel, messages: GlmMessage[], apiKey: stri
   }
 }
 
-async function callGlm(messages: GlmMessage[], apiKey: string, timeoutMs: number, maxTokens: number, pinnedModel: GlmModel | null = null): Promise<{ text: string; model: GlmModel }> {
-  if (pinnedModel) return { text: await callGlmOnce(pinnedModel, messages, apiKey, timeoutMs, maxTokens), model: pinnedModel };
+async function callGlm(messages: GlmMessage[], apiKey: string, timeoutMs: number, maxTokens: number, pinnedModel: string | null = null, endpoint: string | null = null): Promise<{ text: string; model: string }> {
+  if (pinnedModel) return { text: await callGlmOnce(pinnedModel, messages, apiKey, timeoutMs, maxTokens, endpoint), model: pinnedModel };
   for (const [i, model] of GLM_MODELS.entries()) {
     try {
       return { text: await callGlmOnce(model, messages, apiKey, timeoutMs, maxTokens), model };
@@ -441,22 +442,59 @@ async function readBody(req: Request): Promise<unknown> {
 }
 
 // ---------- 路由 ----------
-// BYOK：用户自带 key 与模型为可选契约字段；key 即用即弃，不落盘不进日志
-function readByok(b: Record<string, unknown>): { userKey: string | null; model: GlmModel | null } | Response {
+// 自定义端点由转发层代请求，公网任意用户可 POST：仅 https 公网地址，防 SSRF 打内网/元数据
+function safeEndpoint(raw: string): string | null {
+  let u: URL;
+  try {
+    u = new URL(raw);
+  } catch {
+    return null;
+  }
+  if (u.protocol !== 'https:') return null;
+  if (u.port !== '' && u.port !== '443' && u.port !== '8443') return null;
+  const h = u.hostname.toLowerCase();
+  if (h === 'localhost' || h.endsWith('.localhost') || h.endsWith('.local') || h.endsWith('.internal')) return null;
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(h)) {
+    const [a, b] = h.split('.').map(Number);
+    if (a === 0 || a === 127 || a === 10 || a >= 224 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168)) return null;
+  }
+  if (h.startsWith('[')) {
+    const v = h.slice(1, -1);
+    if (v === '::1' || v.startsWith('fc') || v.startsWith('fd') || v.startsWith('fe80')) return null;
+  }
+  return u.origin + u.pathname.replace(/\/+$/, '');
+}
+
+// BYOK：用户自带 key/模型/端点为可选契约字段；key 即用即弃，不落盘不进日志
+function readByok(b: Record<string, unknown>): { userKey: string | null; model: string | null; endpoint: string | null } | Response {
   let userKey: string | null = null;
   if (b.userKey !== undefined) {
     if (typeof b.userKey !== 'string' || b.userKey.length > 200 || !/^[!-~]+$/.test(b.userKey)) return fail('invalid_input', false, 400);
     userKey = b.userKey;
   }
-  let model: GlmModel | null = null;
-  if (b.model !== undefined) {
-    if (typeof b.model !== 'string' || !(BYOK_MODELS as readonly string[]).includes(b.model)) return fail('invalid_input', false, 400);
-    model = b.model as GlmModel;
+  let endpoint: string | null = null;
+  if (b.endpoint !== undefined) {
+    if (typeof b.endpoint !== 'string' || b.endpoint.length > 200) return fail('invalid_input', false, 400);
+    endpoint = safeEndpoint(b.endpoint);
+    if (endpoint === null) return fail('invalid_input', false, 400);
   }
-  return { userKey, model };
+  let model: string | null = null;
+  if (b.model !== undefined) {
+    if (typeof b.model !== 'string') return fail('invalid_input', false, 400);
+    if (endpoint) {
+      if (!/^\S{1,100}$/u.test(b.model) || b.model === 'auto') return fail('invalid_input', false, 400);
+      model = b.model;
+    } else {
+      if (!(BYOK_MODELS as readonly string[]).includes(b.model)) return fail('invalid_input', false, 400);
+      model = b.model;
+    }
+  } else if (endpoint) {
+    return fail('invalid_input', false, 400);
+  }
+  return { userKey, model, endpoint };
 }
 
-async function handleGenerateDeck(body: unknown, apiKey: string, pinnedModel: GlmModel | null): Promise<Response> {
+async function handleGenerateDeck(body: unknown, apiKey: string, pinnedModel: string | null, endpoint: string | null): Promise<Response> {
   const payload = validateDeckPayload(body);
   if (payload instanceof Response) return payload;
 
@@ -474,7 +512,7 @@ async function handleGenerateDeck(body: unknown, apiKey: string, pinnedModel: Gl
   ];
 
   const { deck, model } = await withRetry(async () => {
-    const result = await callGlm(messages, apiKey, DECK_TIMEOUT_MS, 8000, pinnedModel);
+    const result = await callGlm(messages, apiKey, DECK_TIMEOUT_MS, 8000, pinnedModel, endpoint);
     try {
       return { deck: normalizeDeck(extractJson(result.text)), model: result.model };
     } catch (e) {
@@ -485,7 +523,7 @@ async function handleGenerateDeck(body: unknown, apiKey: string, pinnedModel: Gl
   return json({ ok: true, deck, model });
 }
 
-async function handleAnalogy(body: unknown, apiKey: string, pinnedModel: GlmModel | null): Promise<Response> {
+async function handleAnalogy(body: unknown, apiKey: string, pinnedModel: string | null, endpoint: string | null): Promise<Response> {
   if (typeof body !== 'object' || body === null) return fail('invalid_input', false, 400);
   const b = body as Record<string, unknown>;
   const question = asString(b.question);
@@ -513,7 +551,7 @@ async function handleAnalogy(body: unknown, apiKey: string, pinnedModel: GlmMode
     { role: 'user', content: detail },
   ];
   const { analogy, model } = await withRetry(async () => {
-    const result = await callGlm(messages, apiKey, ANALOGY_TIMEOUT_MS, 1024, pinnedModel);
+    const result = await callGlm(messages, apiKey, ANALOGY_TIMEOUT_MS, 1024, pinnedModel, endpoint);
     const parsed = extractJson(result.text) as Record<string, unknown>;
     const text = asString(parsed.analogy);
     if (text === '') throw new GlmError('bad_output', true);
@@ -535,14 +573,14 @@ export async function handleRequest(req: Request, env: { AI_API_KEY?: string }):
   if (rateLimited(clientIp(req))) return fail('rate_limited', true, 429);
 
   const body = await readBody(req);
-  const byok = typeof body === 'object' && body !== null ? readByok(body as Record<string, unknown>) : { userKey: null, model: null };
+  const byok = typeof body === 'object' && body !== null ? readByok(body as Record<string, unknown>) : { userKey: null, model: null, endpoint: null };
   if (byok instanceof Response) return byok;
   const apiKey = byok.userKey ?? env.AI_API_KEY;
   if (!apiKey) return fail('service_not_configured', false, 503);
   if (body === null) return fail('invalid_input', false, 400);
 
   try {
-    return route === 'deck' ? await handleGenerateDeck(body, apiKey, byok.model) : await handleAnalogy(body, apiKey, byok.model);
+    return route === 'deck' ? await handleGenerateDeck(body, apiKey, byok.model, byok.endpoint) : await handleAnalogy(body, apiKey, byok.model, byok.endpoint);
   } catch (e) {
     if (e instanceof GlmError) return fail(e.code, e.retryable, 502);
     return fail('upstream_error', true, 502);
