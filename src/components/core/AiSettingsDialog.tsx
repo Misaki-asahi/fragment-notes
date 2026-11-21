@@ -50,7 +50,7 @@ export function AiSettingsDialog({ open, onClose }: Props) {
       try {
         url = new URL(ep);
       } catch {
-        setError("端点不是合法 URL，例：https://api4.gemai.cc/v1");
+        setError("端点不是合法 URL，请填写完整的 https 地址");
         return;
       }
       if (url.protocol !== "https:") {
@@ -104,7 +104,7 @@ export function AiSettingsDialog({ open, onClose }: Props) {
       </div>
       <div className="space-y-4 p-5">
         <p className="text-xs leading-relaxed text-ink-2">
-          留空则使用站点默认密钥与免费模型降级链。填入你自己的智谱 API Key 后，生成与比喻追问都改用你的 Key，并可指定更强的模型。
+          留空则使用站点默认密钥与免费模型降级链。填入你自己的 API Key 后，生成与比喻追问都改用你的 Key，并可指定更强的模型或第三方兼容端点。
         </p>
         <label className="block">
           <span className="font-mono text-[11px] tracking-wider text-ink-3">API KEY</span>
@@ -112,7 +112,7 @@ export function AiSettingsDialog({ open, onClose }: Props) {
             type="password"
             value={key}
             onChange={(e) => { setKey(e.target.value); setSaved(false); }}
-            placeholder="智谱 Key，形如 id.secret"
+            placeholder="你的 API Key（智谱形如 id.secret）"
             autoComplete="off"
             className="mt-1 w-full border border-edge bg-surface-2 p-2 font-mono text-sm text-ink placeholder:text-ink-3 focus:border-accent focus:outline-none"
           />
@@ -123,7 +123,7 @@ export function AiSettingsDialog({ open, onClose }: Props) {
             type="url"
             value={endpoint}
             onChange={(e) => { setEndpoint(e.target.value); setSaved(false); }}
-            placeholder="留空 = 智谱官方；例 https://api4.gemai.cc/v1"
+            placeholder="留空 = 智谱官方；填 OpenAI 兼容代理地址"
             autoComplete="off"
             className="mt-1 w-full border border-edge bg-surface-2 p-2 font-mono text-sm text-ink placeholder:text-ink-3 focus:border-accent focus:outline-none"
           />
@@ -146,7 +146,7 @@ export function AiSettingsDialog({ open, onClose }: Props) {
             {BYOK_MODELS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
           </datalist>
           <span className="mt-1 block text-[11px] leading-relaxed text-ink-3">
-            自定义端点时填该服务商的模型名（如 [测试]gemini-4-carbon）；智谱官方可从候选选。
+            自定义端点时填该服务商的模型名；智谱官方可从候选选。
           </span>
         </label>
         <p className="flex items-start gap-2 text-[11px] leading-relaxed text-ink-3">
