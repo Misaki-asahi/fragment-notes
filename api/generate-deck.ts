@@ -509,8 +509,8 @@ async function handleGenerateDeck(body: unknown, apiKey: string, pinnedModel: st
   const payload = validateDeckPayload(body);
   if (payload instanceof Response) return payload;
 
-  // 文本料用纯字符串 content：部分 OpenAI 兼容端点（如 DeepSeek）不接受数组 parts
-  // 图片 url 补回标准 data URL 前缀：严格端点拒收裸 base64（DeepSeek 实测），压缩产物恒为 JPEG
+  // 文本料用纯字符串 content：部分严格 OpenAI 兼容端点不接受数组 parts
+  // 图片 url 补回标准 data URL 前缀：严格端点拒收裸 base64（实测），压缩产物恒为 JPEG
   const userContent: GlmContentPart[] | string =
     payload.kind === 'image'
       ? [
