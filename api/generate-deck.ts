@@ -34,7 +34,11 @@ type ApiResult<T> = { ok: true } & T | { ok: false; error: { code: ApiErrorCode;
 const GLM_ENDPOINT = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
 // 均为智谱免费视觉模型：主模型高峰常回 429(1305)，此时立即换备用模型。
 const GLM_MODELS = ['glm-4.6v-flash', 'glm-4.1v-thinking-flash'] as const;
-type GlmModel = (typeof GLM_MODELS)[number];
+// BYOK 可选模型白名单（含付费档）；auto 不在其中，由客户端省略 model 字段表达
+const BYOK_MODELS = ['glm-4.6v-flash', 'glm-4.1v-thinking-flash', 'glm-4v-flash', 'glm-4v-plus', 'glm-4.5v', 'glm-4.6v'] as const;
+type GlmModel = (typeof GLM_MODELS)[number] | (typeof BYOK_MODELS)[number];
+// 老视觉模型不接受 thinking 参数；思考模型由其自身默认开启
+const THINKING_PARAM_MODELS: readonly string[] = ['glm-4.6v-flash', 'glm-4.5v', 'glm-4.6v'];
 const THINKING_EXTRA_TOKENS = 4000;
 const MAX_TEXT_CHARS = 16000;
 const MAX_IMAGE_BASE64_CHARS = 6_000_000;
@@ -144,7 +148,7 @@ async function callGlmOnce(model: GlmModel, messages: GlmMessage[], apiKey: stri
       body: JSON.stringify({
         model,
         messages,
-        ...(thinkingModel ? {} : { thinking: { type: 'disabled' } }),
+        ...(model === 'glm-4.1v-thinking-flash' || !THINKING_PARAM_MODELS.includes(model) ? {} : { thinking: { type: 'disabled' } }),
         temperature: 0.3,
         max_tokens: thinkingModel ? maxTokens + THINKING_EXTRA_TOKENS : maxTokens,
       }),
@@ -173,7 +177,8 @@ async function callGlmOnce(model: GlmModel, messages: GlmMessage[], apiKey: stri
   }
 }
 
-async function callGlm(messages: GlmMessage[], apiKey: string, timeoutMs: number, maxTokens: number): Promise<{ text: string; model: GlmModel }> {
+async function callGlm(messages: GlmMessage[], apiKey: string, timeoutMs: number, maxTokens: number, pinnedModel: GlmModel | null = null): Promise<{ text: string; model: GlmModel }> {
+  if (pinnedModel) return { text: await callGlmOnce(pinnedModel, messages, apiKey, timeoutMs, maxTokens), model: pinnedModel };
   for (const [i, model] of GLM_MODELS.entries()) {
     try {
       return { text: await callGlmOnce(model, messages, apiKey, timeoutMs, maxTokens), model };
@@ -436,8 +441,23 @@ async function readBody(req: Request): Promise<unknown> {
 }
 
 // ---------- 路由 ----------
-async function handleGenerateDeck(req: Request, apiKey: string): Promise<Response> {
-  const payload = validateDeckPayload(await readBody(req));
+// BYOK：用户自带 key 与模型为可选契约字段；key 即用即弃，不落盘不进日志
+function readByok(b: Record<string, unknown>): { userKey: string | null; model: GlmModel | null } | Response {
+  let userKey: string | null = null;
+  if (b.userKey !== undefined) {
+    if (typeof b.userKey !== 'string' || b.userKey.length > 200 || !/^[!-~]+$/.test(b.userKey)) return fail('invalid_input', false, 400);
+    userKey = b.userKey;
+  }
+  let model: GlmModel | null = null;
+  if (b.model !== undefined) {
+    if (typeof b.model !== 'string' || !(BYOK_MODELS as readonly string[]).includes(b.model)) return fail('invalid_input', false, 400);
+    model = b.model as GlmModel;
+  }
+  return { userKey, model };
+}
+
+async function handleGenerateDeck(body: unknown, apiKey: string, pinnedModel: GlmModel | null): Promise<Response> {
+  const payload = validateDeckPayload(body);
   if (payload instanceof Response) return payload;
 
   const userContent: GlmContentPart[] =
@@ -454,7 +474,7 @@ async function handleGenerateDeck(req: Request, apiKey: string): Promise<Respons
   ];
 
   const { deck, model } = await withRetry(async () => {
-    const result = await callGlm(messages, apiKey, DECK_TIMEOUT_MS, 8000);
+    const result = await callGlm(messages, apiKey, DECK_TIMEOUT_MS, 8000, pinnedModel);
     try {
       return { deck: normalizeDeck(extractJson(result.text)), model: result.model };
     } catch (e) {
@@ -465,8 +485,7 @@ async function handleGenerateDeck(req: Request, apiKey: string): Promise<Respons
   return json({ ok: true, deck, model });
 }
 
-async function handleAnalogy(req: Request, apiKey: string): Promise<Response> {
-  const body = await readBody(req);
+async function handleAnalogy(body: unknown, apiKey: string, pinnedModel: GlmModel | null): Promise<Response> {
   if (typeof body !== 'object' || body === null) return fail('invalid_input', false, 400);
   const b = body as Record<string, unknown>;
   const question = asString(b.question);
@@ -494,7 +513,7 @@ async function handleAnalogy(req: Request, apiKey: string): Promise<Response> {
     { role: 'user', content: detail },
   ];
   const { analogy, model } = await withRetry(async () => {
-    const result = await callGlm(messages, apiKey, ANALOGY_TIMEOUT_MS, 1024);
+    const result = await callGlm(messages, apiKey, ANALOGY_TIMEOUT_MS, 1024, pinnedModel);
     const parsed = extractJson(result.text) as Record<string, unknown>;
     const text = asString(parsed.analogy);
     if (text === '') throw new GlmError('bad_output', true);
@@ -513,11 +532,17 @@ export async function handleRequest(req: Request, env: { AI_API_KEY?: string }):
     return json({ ok: true, service: 'fragment-notes-ai', configured: Boolean(env.AI_API_KEY) });
   }
   if (req.method !== 'POST') return fail('method_not_allowed', false, 405);
-  if (!env.AI_API_KEY) return fail('service_not_configured', false, 503);
   if (rateLimited(clientIp(req))) return fail('rate_limited', true, 429);
 
+  const body = await readBody(req);
+  const byok = typeof body === 'object' && body !== null ? readByok(body as Record<string, unknown>) : { userKey: null, model: null };
+  if (byok instanceof Response) return byok;
+  const apiKey = byok.userKey ?? env.AI_API_KEY;
+  if (!apiKey) return fail('service_not_configured', false, 503);
+  if (body === null) return fail('invalid_input', false, 400);
+
   try {
-    return route === 'deck' ? await handleGenerateDeck(req, env.AI_API_KEY) : await handleAnalogy(req, env.AI_API_KEY);
+    return route === 'deck' ? await handleGenerateDeck(body, apiKey, byok.model) : await handleAnalogy(body, apiKey, byok.model);
   } catch (e) {
     if (e instanceof GlmError) return fail(e.code, e.retryable, 502);
     return fail('upstream_error', true, 502);

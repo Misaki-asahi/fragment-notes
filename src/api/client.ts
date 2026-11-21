@@ -1,4 +1,5 @@
 import { isRecord } from "../utils/deckValidation";
+import { getByok } from "../utils/byok";
 
 const BASE = import.meta.env.DEV ? "http://127.0.0.1:8000" : "";
 
@@ -28,10 +29,15 @@ export async function postApi<T>(path: string, body: unknown, timeoutMs: number)
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
+    const byok = getByok();
+    const payload =
+      byok && isRecord(body)
+        ? { ...body, userKey: byok.key, ...(byok.model !== "auto" ? { model: byok.model } : {}) }
+        : body;
     const response = await fetch(`${BASE}/functions/v1/app${path}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify(payload),
       signal: controller.signal,
       credentials: "same-origin",
     });
