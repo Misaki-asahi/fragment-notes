@@ -27,14 +27,18 @@ type ApiErrorCode =
   | 'timeout'
   | 'upstream_error'
   | 'upstream_busy'
-  | 'bad_output';
+  | 'bad_output'
+  | 'models_unavailable';
 
 type ApiResult<T> = { ok: true } & T | { ok: false; error: { code: ApiErrorCode; message: string; retryable: boolean } };
 
 const GLM_ENDPOINT = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
 // 均为智谱免费视觉模型：主模型高峰常回 429(1305)，此时立即换备用模型。
 const GLM_MODELS = ['glm-4.6v-flash', 'glm-4.1v-thinking-flash'] as const;
-type GlmModel = (typeof GLM_MODELS)[number];
+// BYOK 可选模型白名单（含付费档）；auto 不在其中，由客户端省略 model 字段表达
+const BYOK_MODELS = ['glm-4.6v-flash', 'glm-4.1v-thinking-flash', 'glm-4v-flash', 'glm-4v-plus', 'glm-4.5v', 'glm-4.6v'] as const;
+// 老视觉模型不接受 thinking 参数；思考模型由其自身默认开启
+const THINKING_PARAM_MODELS: readonly string[] = ['glm-4.6v-flash', 'glm-4.5v', 'glm-4.6v'];
 const THINKING_EXTRA_TOKENS = 4000;
 const MAX_TEXT_CHARS = 16000;
 const MAX_IMAGE_BASE64_CHARS = 6_000_000;
@@ -54,6 +58,7 @@ const ERROR_MESSAGES: Record<ApiErrorCode, string> = {
   upstream_error: 'AI 服务暂时不可用',
   upstream_busy: '免费 AI 模型当前繁忙，请稍后重试',
   bad_output: 'AI 返回的内容格式异常',
+  models_unavailable: '该端点不支持模型列表检索，请手填模型名',
 };
 
 function fail(code: ApiErrorCode, retryable: boolean, status: number): Response {
@@ -133,27 +138,40 @@ class GlmError extends Error {
   }
 }
 
-async function callGlmOnce(model: GlmModel, messages: GlmMessage[], apiKey: string, timeoutMs: number, maxTokens: number): Promise<string> {
+async function callGlmOnce(model: string, messages: GlmMessage[], apiKey: string, timeoutMs: number, maxTokens: number, endpoint: string | null = null): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
-  const thinkingModel = model === 'glm-4.1v-thinking-flash';
+  const thinkingModel = !endpoint && model === 'glm-4.1v-thinking-flash';
+  const url = endpoint ? (endpoint.endsWith('/chat/completions') ? endpoint : `${endpoint}/chat/completions`) : GLM_ENDPOINT;
   try {
-    const res = await fetch(GLM_ENDPOINT, {
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
         model,
         messages,
-        ...(thinkingModel ? {} : { thinking: { type: 'disabled' } }),
+        ...(thinkingModel || endpoint || !THINKING_PARAM_MODELS.includes(model) ? {} : { thinking: { type: 'disabled' } }),
         temperature: 0.3,
         max_tokens: thinkingModel ? maxTokens + THINKING_EXTRA_TOKENS : maxTokens,
       }),
       signal: controller.signal,
     });
+    console.info(`[glm] model=${model} host=${new URL(url).host} status=${res.status}`);
     if (res.status === 401 || res.status === 403) throw new GlmError('auth_error', false);
     if (res.status === 429) throw new GlmError('upstream_busy', true);
-    if (res.status >= 500) throw new GlmError('upstream_error', true);
-    if (!res.ok) throw new GlmError('upstream_error', false);
+    if (!res.ok) {
+      // 上游拒绝原因入日志（截断、仅错误文本），便于第三方端点兼容排查
+      const errBody = await res.text().catch(() => '');
+      let upstreamMsg = errBody.slice(0, 160);
+      try {
+        const parsed = JSON.parse(errBody) as { error?: { message?: unknown; code?: unknown } };
+        if (typeof parsed.error?.message === 'string') upstreamMsg = parsed.error.message.slice(0, 160);
+      } catch {
+        // 非 JSON 错误体保留原文截断
+      }
+      console.info(`[glm] reject status=${res.status} upstreamMsg=${JSON.stringify(upstreamMsg)}`);
+      throw new GlmError('upstream_error', res.status >= 500);
+    }
     const data = (await res.json()) as { choices?: { message?: { content?: string }; finish_reason?: string }[]; error?: { code?: string } } | null;
     const content = data?.choices?.[0]?.message?.content;
     // 仅状态码/长度/错误码，不含密钥与正文，供云端出口差异排查
@@ -173,7 +191,8 @@ async function callGlmOnce(model: GlmModel, messages: GlmMessage[], apiKey: stri
   }
 }
 
-async function callGlm(messages: GlmMessage[], apiKey: string, timeoutMs: number, maxTokens: number): Promise<{ text: string; model: GlmModel }> {
+async function callGlm(messages: GlmMessage[], apiKey: string, timeoutMs: number, maxTokens: number, pinnedModel: string | null = null, endpoint: string | null = null): Promise<{ text: string; model: string }> {
+  if (pinnedModel) return { text: await callGlmOnce(pinnedModel, messages, apiKey, timeoutMs, maxTokens, endpoint), model: pinnedModel };
   for (const [i, model] of GLM_MODELS.entries()) {
     try {
       return { text: await callGlmOnce(model, messages, apiKey, timeoutMs, maxTokens), model };
@@ -283,7 +302,11 @@ function alignSymbolicAnswer(options: string[], answerIndex: number, explanation
     const n = norm(op);
     return n === tail || n.endsWith(tail) || tail.endsWith(n) ? [i] : [];
   });
-  if (matches.length === 1) return matches[0];
+  if (matches.length === 1) {
+    // 解析末尾等式可能是对比公式而非本题答案；模型标的等式选项若在解析中被原文讨论，信任模型标注
+    if (matches[0] !== answerIndex && options[answerIndex].includes('=') && norm(explanation).includes(norm(options[answerIndex]))) return answerIndex;
+    return matches[0];
+  }
   if (matches.length === 0) return -1;
   return answerIndex;
 }
@@ -432,17 +455,69 @@ async function readBody(req: Request): Promise<unknown> {
 }
 
 // ---------- 路由 ----------
-async function handleGenerateDeck(req: Request, apiKey: string): Promise<Response> {
-  const payload = validateDeckPayload(await readBody(req));
+// 自定义端点由转发层代请求，公网任意用户可 POST：仅 https 公网地址，防 SSRF 打内网/元数据
+function safeEndpoint(raw: string): string | null {
+  let u: URL;
+  try {
+    u = new URL(raw);
+  } catch {
+    return null;
+  }
+  if (u.protocol !== 'https:') return null;
+  if (u.port !== '' && u.port !== '443' && u.port !== '8443') return null;
+  const h = u.hostname.toLowerCase();
+  if (h === 'localhost' || h.endsWith('.localhost') || h.endsWith('.local') || h.endsWith('.internal')) return null;
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(h)) {
+    const [a, b] = h.split('.').map(Number);
+    if (a === 0 || a === 127 || a === 10 || a >= 224 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168)) return null;
+  }
+  if (h.startsWith('[')) {
+    const v = h.slice(1, -1);
+    if (v === '::1' || v.startsWith('fc') || v.startsWith('fd') || v.startsWith('fe80')) return null;
+  }
+  return u.origin + u.pathname.replace(/\/+$/, '');
+}
+
+// BYOK：用户自带 key/模型/端点为可选契约字段；key 即用即弃，不落盘不进日志
+function readByok(b: Record<string, unknown>): { userKey: string | null; model: string | null; endpoint: string | null } | Response {
+  let userKey: string | null = null;
+  if (b.userKey !== undefined) {
+    if (typeof b.userKey !== 'string' || b.userKey.length > 200 || !/^[!-~]+$/.test(b.userKey)) return fail('invalid_input', false, 400);
+    userKey = b.userKey;
+  }
+  let endpoint: string | null = null;
+  if (b.endpoint !== undefined) {
+    if (typeof b.endpoint !== 'string' || b.endpoint.length > 200) return fail('invalid_input', false, 400);
+    endpoint = safeEndpoint(b.endpoint);
+    if (endpoint === null) return fail('invalid_input', false, 400);
+  }
+  let model: string | null = null;
+  if (b.model !== undefined) {
+    if (typeof b.model !== 'string') return fail('invalid_input', false, 400);
+    if (endpoint) {
+      if (!/^\S{1,100}$/u.test(b.model) || b.model === 'auto') return fail('invalid_input', false, 400);
+      model = b.model;
+    } else {
+      if (!(BYOK_MODELS as readonly string[]).includes(b.model)) return fail('invalid_input', false, 400);
+      model = b.model;
+    }
+  }
+  return { userKey, model, endpoint };
+}
+
+async function handleGenerateDeck(body: unknown, apiKey: string, pinnedModel: string | null, endpoint: string | null): Promise<Response> {
+  const payload = validateDeckPayload(body);
   if (payload instanceof Response) return payload;
 
-  const userContent: GlmContentPart[] =
+  // 文本料用纯字符串 content：部分严格 OpenAI 兼容端点不接受数组 parts
+  // 图片 url 补回标准 data URL 前缀：严格端点拒收裸 base64（实测），压缩产物恒为 JPEG
+  const userContent: GlmContentPart[] | string =
     payload.kind === 'image'
       ? [
-          { type: 'image_url', image_url: { url: payload.imageBase64 ?? '' } },
+          { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${payload.imageBase64 ?? ''}` } },
           { type: 'text', text: '这是学生的课堂笔记照片。请先忠实识别照片中的内容，再按系统要求输出 StudyDeck JSON。' },
         ]
-      : [{ type: 'text', text: `请把以下学习资料解析为 StudyDeck JSON：\n<material>\n${payload.text}\n</material>` }];
+      : `请把以下学习资料解析为 StudyDeck JSON：\n<material>\n${payload.text}\n</material>`;
 
   const messages: GlmMessage[] = [
     { role: 'system', content: DECK_SYSTEM_PROMPT },
@@ -450,7 +525,7 @@ async function handleGenerateDeck(req: Request, apiKey: string): Promise<Respons
   ];
 
   const { deck, model } = await withRetry(async () => {
-    const result = await callGlm(messages, apiKey, DECK_TIMEOUT_MS, 8000);
+    const result = await callGlm(messages, apiKey, DECK_TIMEOUT_MS, 8000, pinnedModel, endpoint);
     try {
       return { deck: normalizeDeck(extractJson(result.text)), model: result.model };
     } catch (e) {
@@ -461,8 +536,7 @@ async function handleGenerateDeck(req: Request, apiKey: string): Promise<Respons
   return json({ ok: true, deck, model });
 }
 
-async function handleAnalogy(req: Request, apiKey: string): Promise<Response> {
-  const body = await readBody(req);
+async function handleAnalogy(body: unknown, apiKey: string, pinnedModel: string | null, endpoint: string | null): Promise<Response> {
   if (typeof body !== 'object' || body === null) return fail('invalid_input', false, 400);
   const b = body as Record<string, unknown>;
   const question = asString(b.question);
@@ -490,7 +564,7 @@ async function handleAnalogy(req: Request, apiKey: string): Promise<Response> {
     { role: 'user', content: detail },
   ];
   const { analogy, model } = await withRetry(async () => {
-    const result = await callGlm(messages, apiKey, ANALOGY_TIMEOUT_MS, 1024);
+    const result = await callGlm(messages, apiKey, ANALOGY_TIMEOUT_MS, 1024, pinnedModel, endpoint);
     const parsed = extractJson(result.text) as Record<string, unknown>;
     const text = asString(parsed.analogy);
     if (text === '') throw new GlmError('bad_output', true);
@@ -499,9 +573,40 @@ async function handleAnalogy(req: Request, apiKey: string): Promise<Response> {
   return json({ ok: true, analogy, model });
 }
 
+async function handleListModels(body: unknown): Promise<Response> {
+  if (typeof body !== 'object' || body === null) return fail('invalid_input', false, 400);
+  const byok = readByok(body as Record<string, unknown>);
+  if (byok instanceof Response) return byok;
+  if (!byok.endpoint) return json({ ok: true, models: [...BYOK_MODELS] });
+  if (!byok.userKey) return fail('invalid_input', false, 400);
+  const base = byok.endpoint.replace(/\/chat\/completions$/, '');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15_000);
+  try {
+    const res = await fetch(`${base}/models`, { headers: { Authorization: `Bearer ${byok.userKey}` }, signal: controller.signal });
+    console.info(`[models] host=${new URL(base).host} status=${res.status}`);
+    if (res.status === 401 || res.status === 403) return fail('auth_error', false, 502);
+    if (res.status === 429) return fail('upstream_busy', true, 502);
+    if (!res.ok) return fail('models_unavailable', false, 502);
+    const data = (await res.json()) as { data?: unknown; models?: unknown } | null;
+    const list = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : Array.isArray(data?.models) ? data.models : null;
+    if (!list) return fail('models_unavailable', false, 502);
+    const models = list
+      .map((x) => (typeof x === 'string' ? x : typeof x === 'object' && x !== null && typeof (x as { id?: unknown }).id === 'string' ? (x as { id: string }).id : ''))
+      .filter((s) => s !== '' && s.length <= 100)
+      .slice(0, 200);
+    if (models.length === 0) return fail('models_unavailable', false, 502);
+    return json({ ok: true, models });
+  } catch (e) {
+    return fail(e instanceof SyntaxError ? 'models_unavailable' : 'timeout', true, 502);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function handleRequest(req: Request, env: { AI_API_KEY?: string }): Promise<Response> {
   const path = new URL(req.url).pathname;
-  const route = path.endsWith('/generate-deck') ? 'deck' : path.endsWith('/analogy') ? 'analogy' : path.endsWith('/health') ? 'health' : null;
+  const route = path.endsWith('/generate-deck') ? 'deck' : path.endsWith('/analogy') ? 'analogy' : path.endsWith('/list-models') ? 'models' : path.endsWith('/health') ? 'health' : null;
 
   if (route === null) return fail('not_found', false, 404);
   if (route === 'health') {
@@ -509,11 +614,19 @@ export async function handleRequest(req: Request, env: { AI_API_KEY?: string }):
     return json({ ok: true, service: 'fragment-notes-ai', configured: Boolean(env.AI_API_KEY) });
   }
   if (req.method !== 'POST') return fail('method_not_allowed', false, 405);
-  if (!env.AI_API_KEY) return fail('service_not_configured', false, 503);
   if (rateLimited(clientIp(req))) return fail('rate_limited', true, 429);
 
+  const body = await readBody(req);
+  if (body === null) return env.AI_API_KEY ? fail('invalid_input', false, 400) : fail('service_not_configured', false, 503);
+  if (route === 'models') return handleListModels(body);
+  const byok = readByok(body as Record<string, unknown>);
+  if (byok instanceof Response) return byok;
+  if (byok.endpoint && byok.model === null) return fail('invalid_input', false, 400);
+  const apiKey = byok.userKey ?? env.AI_API_KEY;
+  if (!apiKey) return fail('service_not_configured', false, 503);
+
   try {
-    return route === 'deck' ? await handleGenerateDeck(req, env.AI_API_KEY) : await handleAnalogy(req, env.AI_API_KEY);
+    return route === 'deck' ? await handleGenerateDeck(body, apiKey, byok.model, byok.endpoint) : await handleAnalogy(body, apiKey, byok.model, byok.endpoint);
   } catch (e) {
     if (e instanceof GlmError) return fail(e.code, e.retryable, 502);
     return fail('upstream_error', true, 502);

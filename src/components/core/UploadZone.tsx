@@ -119,14 +119,14 @@ export function UploadZone({ busy, onSubmit }: Props) {
         }`}
       >
         <FileUp className="h-6 w-6 text-accent-2" />
-        <p className="text-sm text-ink-2">拖拽 JPG / PNG 笔记照片或 PDF 课件到这里</p>
+        <p className="text-sm text-ink-2">拖拽 JPG / PNG 笔记照片、PDF 课件或 HTML 网页到这里</p>
         <p className="font-mono text-[11px] tracking-wider text-ink-3">
-          PDF 提取前 15 页 · 照片自动压缩 · 扫描版 PDF 请改拍照
+          PDF 提取前 15 页 · 照片自动压缩 · HTML 提取正文 · 扫描版 PDF 请改拍照
         </p>
         <input
           ref={fileRef}
           type="file"
-          accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+          accept=".jpg,.jpeg,.png,.pdf,.html,.htm,image/jpeg,image/png,application/pdf,text/html"
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0];
