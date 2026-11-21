@@ -1,5 +1,4 @@
 import { isRecord } from "../utils/deckValidation";
-import { getByok } from "../utils/byok";
 
 const BASE = import.meta.env.DEV ? "http://127.0.0.1:8000" : "";
 
@@ -23,22 +22,16 @@ const messages: Record<string, string> = {
   upstream_error: "AI 服务暂时不可用，请稍后重试",
   timeout: "AI 响应超时，请稍后重试",
   bad_output: "AI 返回内容不完整，请重试",
-  models_unavailable: "该端点不支持模型列表检索，请手填模型名",
 };
 
 export async function postApi<T>(path: string, body: unknown, timeoutMs: number): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const byok = getByok();
-    const payload =
-      byok && isRecord(body)
-        ? { userKey: byok.key, ...(byok.model !== "auto" ? { model: byok.model } : {}), ...(byok.endpoint !== "" ? { endpoint: byok.endpoint } : {}), ...body }
-        : body;
     const response = await fetch(`${BASE}/functions/v1/app${path}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
       signal: controller.signal,
       credentials: "same-origin",
     });

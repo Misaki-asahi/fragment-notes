@@ -4,7 +4,6 @@ import {
   BookOpen,
   Download,
   History,
-  KeyRound,
   Layers,
   ListChecks,
   RotateCcw,
@@ -13,7 +12,6 @@ import {
 import { UploadZone } from "../components/core/UploadZone";
 import { LoadingSkeleton } from "../components/core/LoadingSkeleton";
 import { HistoryDrawer } from "../components/core/HistoryDrawer";
-import { AiSettingsDialog } from "../components/core/AiSettingsDialog";
 import { ConceptMatrix } from "../components/rookie/ConceptMatrix";
 import { FlashCardDeck } from "../components/rookie/FlashCardDeck";
 import { WrongBookView } from "../components/rookie/WrongBookView";
@@ -24,7 +22,6 @@ import { generateDeck } from "../api/generateDeck";
 import type { DeckPayload } from "../api/generateDeck";
 import { requestAnalogy } from "../api/analogy";
 import { DeckApiError } from "../api/client";
-import { getByok } from "../utils/byok";
 import type { StudyDeck } from "../types/deck";
 import { QuizEngine } from "./QuizEngine";
 
@@ -46,9 +43,7 @@ function errorHint(e: DeckApiError): string | null {
     case "service_not_configured":
       return "后端尚未配置 AI_API_KEY，请联系站点管理员在 Sites Settings 填入 Secret";
     case "auth_error":
-      return getByok()
-        ? "你自己的 API Key 无效或已过期，请在「AI 设置」里检查或清除"
-        : "API Key 无效或已过期，请检查密钥配置";
+      return "API Key 无效或已过期，请检查密钥配置";
     case "rate_limited":
       return "请求太频繁（每分钟限 10 次），稍等片刻再试";
     default:
@@ -66,7 +61,6 @@ export function WorkspacePage() {
   const [error, setError] = useState<DeckApiError | null>(null);
   const [lastPayload, setLastPayload] = useState<DeckPayload | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
   const [retryQuestions, setRetryQuestions] = useState<StudyDeck["quizzes"] | undefined>();
   const generationLock = useRef(false);
 
@@ -149,14 +143,6 @@ export function WorkspacePage() {
             <History className="h-3.5 w-3.5" />
             历史牌组
           </button>
-          <button
-            type="button"
-            onClick={() => setAiSettingsOpen(true)}
-            className="inline-flex items-center gap-2 border border-edge px-4 py-2 font-mono text-xs tracking-wider text-ink-2 transition-colors hover:border-accent hover:text-ink"
-          >
-            <KeyRound className="h-3.5 w-3.5" />
-            AI 设置
-          </button>
         </div>
       </div>
 
@@ -215,7 +201,6 @@ export function WorkspacePage() {
         onSelect={selectDeck}
         onDelete={deleteDeck}
       />}
-      {aiSettingsOpen && <AiSettingsDialog open={aiSettingsOpen} onClose={() => setAiSettingsOpen(false)} />}
     </div>
   );
 }

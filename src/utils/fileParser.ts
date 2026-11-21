@@ -56,16 +56,6 @@ export async function extractPdfText(file: File): Promise<PdfExtract> {
   }
 }
 
-export async function extractHtmlText(file: File): Promise<{ text: string; notice: string | null }> {
-  const raw = await file.text();
-  const doc = new DOMParser().parseFromString(raw, "text/html");
-  doc.querySelectorAll("script,style,noscript,template,svg").forEach((el) => el.remove());
-  const text = (doc.body?.textContent ?? "").replace(/\s+/g, " ").trim();
-  if (text === "") throw new Error("这份 HTML 没有提取到正文文字，请换一种格式重试");
-  const notice = text.length > PDF_MAX_CHARS ? `HTML 正文超过 ${PDF_MAX_CHARS} 字，已截取前 ${PDF_MAX_CHARS} 字` : null;
-  return { text: text.slice(0, PDF_MAX_CHARS), notice };
-}
-
 export async function compressImageToBase64(file: File): Promise<string> {
   const bitmap = await createImageBitmap(file);
   try {
@@ -91,12 +81,7 @@ export async function fileToPayload(
   file: File,
 ): Promise<{ payload: DeckPayload; notice: string | null }> {
   const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
-  const isHtml = file.type === "text/html" || /\.html?$/i.test(file.name);
   if (file.size > 20 * 1024 * 1024) throw new Error("文件超过 20MB，请拆分 PDF 或压缩照片后重试");
-  if (isHtml) {
-    const result = await extractHtmlText(file);
-    return { payload: { kind: "text", text: result.text }, notice: result.notice };
-  }
   if (isPdf) {
     try {
       const result = await extractPdfText(file);
@@ -111,5 +96,5 @@ export async function fileToPayload(
     const imageBase64 = await compressImageToBase64(file);
     return { payload: { kind: "image", imageBase64 }, notice: null };
   }
-  throw new Error("仅支持 JPG / PNG 照片、PDF 课件或 HTML 网页");
+  throw new Error("仅支持 JPG / PNG 照片或 PDF 课件");
 }
