@@ -21,7 +21,12 @@ function loadEnv(): Record<string, string> {
 }
 
 const env = loadEnv();
-const ALLOWED_ORIGINS = new Set(['http://localhost:5173', 'http://127.0.0.1:5173']);
+const ALLOWED_ORIGINS = new Set([
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:5174',
+  'http://127.0.0.1:5174',
+]);
 
 const server = createServer(async (req, res) => {
   const origin = req.headers.origin ?? '';
