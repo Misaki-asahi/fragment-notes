@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { KeyRound, X } from "lucide-react";
+import { KeyRound, RefreshCw, X } from "lucide-react";
 import { BYOK_MODELS, clearByok, getByok, setByok } from "../../utils/byok";
+import { listModels } from "../../api/listModels";
 
 type Props = {
   open: boolean;
@@ -14,6 +15,9 @@ export function AiSettingsDialog({ open, onClose }: Props) {
   const [endpoint, setEndpoint] = useState("");
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fetched, setFetched] = useState<string[] | null>(null);
+  const [fetching, setFetching] = useState(false);
+  const [fetchErr, setFetchErr] = useState<string | null>(null);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -24,6 +28,8 @@ export function AiSettingsDialog({ open, onClose }: Props) {
     setEndpoint(current?.endpoint ?? "");
     setSaved(Boolean(current));
     setError(null);
+    setFetched(null);
+    setFetchErr(null);
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     dialog.showModal();
@@ -81,6 +87,20 @@ export function AiSettingsDialog({ open, onClose }: Props) {
     setEndpoint("");
     setSaved(false);
     setError(null);
+    setFetched(null);
+    setFetchErr(null);
+  }
+
+  async function fetchModels() {
+    setFetching(true);
+    setFetchErr(null);
+    try {
+      setFetched(await listModels(endpoint.trim(), key.trim()));
+    } catch (e) {
+      setFetchErr(e instanceof Error ? e.message : "拉取失败，请重试");
+    } finally {
+      setFetching(false);
+    }
   }
 
   return (
@@ -143,11 +163,24 @@ export function AiSettingsDialog({ open, onClose }: Props) {
             className="mt-1 w-full border border-edge bg-surface-2 p-2 font-mono text-sm text-ink placeholder:text-ink-3 focus:border-accent focus:outline-none"
           />
           <datalist id="byok-model-options">
-            {BYOK_MODELS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+            {(fetched ? fetched.map((id) => ({ value: id, label: id })) : BYOK_MODELS).map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
           </datalist>
           <span className="mt-1 block text-[11px] leading-relaxed text-ink-3">
             自定义端点时填该服务商的模型名；智谱官方可从候选选。
           </span>
+          <span className="mt-2 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void fetchModels()}
+              disabled={fetching || key.trim() === ""}
+              className="inline-flex items-center gap-2 border border-edge px-3 py-1.5 font-mono text-[11px] tracking-wider text-ink-2 transition-colors hover:border-accent hover:text-ink disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3 w-3 ${fetching ? "animate-spin" : ""}`} />
+              {fetching ? "拉取中…" : "拉取可用模型"}
+            </button>
+            {fetched && <span className="text-[11px] text-accent-2">拉取到 {fetched.length} 个模型，已填入候选</span>}
+          </span>
+          {fetchErr && <p role="alert" className="mt-1 text-xs text-bad">{fetchErr}</p>}
         </label>
         <p className="flex items-start gap-2 text-[11px] leading-relaxed text-ink-3">
           <KeyRound className="mt-0.5 h-3 w-3 shrink-0" />

@@ -27,7 +27,8 @@ type ApiErrorCode =
   | 'timeout'
   | 'upstream_error'
   | 'upstream_busy'
-  | 'bad_output';
+  | 'bad_output'
+  | 'models_unavailable';
 
 type ApiResult<T> = { ok: true } & T | { ok: false; error: { code: ApiErrorCode; message: string; retryable: boolean } };
 
@@ -57,6 +58,7 @@ const ERROR_MESSAGES: Record<ApiErrorCode, string> = {
   upstream_error: 'AI 服务暂时不可用',
   upstream_busy: '免费 AI 模型当前繁忙，请稍后重试',
   bad_output: 'AI 返回的内容格式异常',
+  models_unavailable: '该端点不支持模型列表检索，请手填模型名',
 };
 
 function fail(code: ApiErrorCode, retryable: boolean, status: number): Response {
@@ -488,8 +490,6 @@ function readByok(b: Record<string, unknown>): { userKey: string | null; model: 
       if (!(BYOK_MODELS as readonly string[]).includes(b.model)) return fail('invalid_input', false, 400);
       model = b.model;
     }
-  } else if (endpoint) {
-    return fail('invalid_input', false, 400);
   }
   return { userKey, model, endpoint };
 }
@@ -560,9 +560,40 @@ async function handleAnalogy(body: unknown, apiKey: string, pinnedModel: string 
   return json({ ok: true, analogy, model });
 }
 
+async function handleListModels(body: unknown): Promise<Response> {
+  if (typeof body !== 'object' || body === null) return fail('invalid_input', false, 400);
+  const byok = readByok(body as Record<string, unknown>);
+  if (byok instanceof Response) return byok;
+  if (!byok.endpoint) return json({ ok: true, models: [...BYOK_MODELS] });
+  if (!byok.userKey) return fail('invalid_input', false, 400);
+  const base = byok.endpoint.replace(/\/chat\/completions$/, '');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15_000);
+  try {
+    const res = await fetch(`${base}/models`, { headers: { Authorization: `Bearer ${byok.userKey}` }, signal: controller.signal });
+    console.info(`[models] host=${new URL(base).host} status=${res.status}`);
+    if (res.status === 401 || res.status === 403) return fail('auth_error', false, 502);
+    if (res.status === 429) return fail('upstream_busy', true, 502);
+    if (!res.ok) return fail('models_unavailable', false, 502);
+    const data = (await res.json()) as { data?: unknown; models?: unknown } | null;
+    const list = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : Array.isArray(data?.models) ? data.models : null;
+    if (!list) return fail('models_unavailable', false, 502);
+    const models = list
+      .map((x) => (typeof x === 'string' ? x : typeof x === 'object' && x !== null && typeof (x as { id?: unknown }).id === 'string' ? (x as { id: string }).id : ''))
+      .filter((s) => s !== '' && s.length <= 100)
+      .slice(0, 200);
+    if (models.length === 0) return fail('models_unavailable', false, 502);
+    return json({ ok: true, models });
+  } catch (e) {
+    return fail(e instanceof SyntaxError ? 'models_unavailable' : 'timeout', true, 502);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function handleRequest(req: Request, env: { AI_API_KEY?: string }): Promise<Response> {
   const path = new URL(req.url).pathname;
-  const route = path.endsWith('/generate-deck') ? 'deck' : path.endsWith('/analogy') ? 'analogy' : path.endsWith('/health') ? 'health' : null;
+  const route = path.endsWith('/generate-deck') ? 'deck' : path.endsWith('/analogy') ? 'analogy' : path.endsWith('/list-models') ? 'models' : path.endsWith('/health') ? 'health' : null;
 
   if (route === null) return fail('not_found', false, 404);
   if (route === 'health') {
@@ -573,11 +604,13 @@ export async function handleRequest(req: Request, env: { AI_API_KEY?: string }):
   if (rateLimited(clientIp(req))) return fail('rate_limited', true, 429);
 
   const body = await readBody(req);
-  const byok = typeof body === 'object' && body !== null ? readByok(body as Record<string, unknown>) : { userKey: null, model: null, endpoint: null };
+  if (body === null) return env.AI_API_KEY ? fail('invalid_input', false, 400) : fail('service_not_configured', false, 503);
+  if (route === 'models') return handleListModels(body);
+  const byok = readByok(body as Record<string, unknown>);
   if (byok instanceof Response) return byok;
+  if (byok.endpoint && byok.model === null) return fail('invalid_input', false, 400);
   const apiKey = byok.userKey ?? env.AI_API_KEY;
   if (!apiKey) return fail('service_not_configured', false, 503);
-  if (body === null) return fail('invalid_input', false, 400);
 
   try {
     return route === 'deck' ? await handleGenerateDeck(body, apiKey, byok.model, byok.endpoint) : await handleAnalogy(body, apiKey, byok.model, byok.endpoint);
