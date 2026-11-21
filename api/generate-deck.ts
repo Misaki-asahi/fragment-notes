@@ -283,7 +283,11 @@ function alignSymbolicAnswer(options: string[], answerIndex: number, explanation
     const n = norm(op);
     return n === tail || n.endsWith(tail) || tail.endsWith(n) ? [i] : [];
   });
-  if (matches.length === 1) return matches[0];
+  if (matches.length === 1) {
+    // 解析末尾等式可能是对比公式而非本题答案；模型标的等式选项若在解析中被原文讨论，信任模型标注
+    if (matches[0] !== answerIndex && options[answerIndex].includes('=') && norm(explanation).includes(norm(options[answerIndex]))) return answerIndex;
+    return matches[0];
+  }
   if (matches.length === 0) return -1;
   return answerIndex;
 }
