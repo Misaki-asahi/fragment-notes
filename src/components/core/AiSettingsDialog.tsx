@@ -107,11 +107,6 @@ export function AiSettingsDialog({ open, onClose }: Props) {
     <dialog
       ref={dialogRef}
       onCancel={(event) => { event.preventDefault(); onClose(); }}
-      onClick={(event) => {
-        if (event.target !== event.currentTarget) return;
-        const rect = event.currentTarget.getBoundingClientRect();
-        if (event.clientX < rect.left || event.clientX > rect.right) onClose();
-      }}
       aria-label="AI 设置"
       className="fixed inset-0 m-auto h-fit max-h-[85dvh] w-96 max-w-[90vw] overflow-y-auto border border-edge bg-surface p-0 text-ink backdrop:bg-void/70 backdrop:backdrop-blur-sm"
     >
