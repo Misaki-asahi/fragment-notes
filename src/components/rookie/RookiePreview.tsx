@@ -55,7 +55,7 @@ export function RookiePreview() {
   };
 
   return (
-    <div className="min-h-screen bg-void px-4 py-8 text-ink">
+    <div className="site-shell min-h-screen bg-void px-4 py-8 text-ink">
       <div className="mx-auto flex max-w-3xl flex-col gap-8">
         <header className="flex items-center justify-between gap-4">
           <div>
