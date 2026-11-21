@@ -159,8 +159,19 @@ async function callGlmOnce(model: string, messages: GlmMessage[], apiKey: string
     console.info(`[glm] model=${model} host=${new URL(url).host} status=${res.status}`);
     if (res.status === 401 || res.status === 403) throw new GlmError('auth_error', false);
     if (res.status === 429) throw new GlmError('upstream_busy', true);
-    if (res.status >= 500) throw new GlmError('upstream_error', true);
-    if (!res.ok) throw new GlmError('upstream_error', false);
+    if (!res.ok) {
+      // 上游拒绝原因入日志（截断、仅错误文本），便于第三方端点兼容排查
+      const errBody = await res.text().catch(() => '');
+      let upstreamMsg = errBody.slice(0, 160);
+      try {
+        const parsed = JSON.parse(errBody) as { error?: { message?: unknown; code?: unknown } };
+        if (typeof parsed.error?.message === 'string') upstreamMsg = parsed.error.message.slice(0, 160);
+      } catch {
+        // 非 JSON 错误体保留原文截断
+      }
+      console.info(`[glm] reject status=${res.status} upstreamMsg=${JSON.stringify(upstreamMsg)}`);
+      throw new GlmError('upstream_error', res.status >= 500);
+    }
     const data = (await res.json()) as { choices?: { message?: { content?: string }; finish_reason?: string }[]; error?: { code?: string } } | null;
     const content = data?.choices?.[0]?.message?.content;
     // 仅状态码/长度/错误码，不含密钥与正文，供云端出口差异排查
@@ -498,13 +509,14 @@ async function handleGenerateDeck(body: unknown, apiKey: string, pinnedModel: st
   const payload = validateDeckPayload(body);
   if (payload instanceof Response) return payload;
 
-  const userContent: GlmContentPart[] =
+  // 文本料用纯字符串 content：部分 OpenAI 兼容端点（如 DeepSeek）不接受数组 parts
+  const userContent: GlmContentPart[] | string =
     payload.kind === 'image'
       ? [
           { type: 'image_url', image_url: { url: payload.imageBase64 ?? '' } },
           { type: 'text', text: '这是学生的课堂笔记照片。请先忠实识别照片中的内容，再按系统要求输出 StudyDeck JSON。' },
         ]
-      : [{ type: 'text', text: `请把以下学习资料解析为 StudyDeck JSON：\n<material>\n${payload.text}\n</material>` }];
+      : `请把以下学习资料解析为 StudyDeck JSON：\n<material>\n${payload.text}\n</material>`;
 
   const messages: GlmMessage[] = [
     { role: 'system', content: DECK_SYSTEM_PROMPT },
