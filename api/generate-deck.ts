@@ -510,10 +510,11 @@ async function handleGenerateDeck(body: unknown, apiKey: string, pinnedModel: st
   if (payload instanceof Response) return payload;
 
   // 文本料用纯字符串 content：部分 OpenAI 兼容端点（如 DeepSeek）不接受数组 parts
+  // 图片 url 补回标准 data URL 前缀：严格端点拒收裸 base64（DeepSeek 实测），压缩产物恒为 JPEG
   const userContent: GlmContentPart[] | string =
     payload.kind === 'image'
       ? [
-          { type: 'image_url', image_url: { url: payload.imageBase64 ?? '' } },
+          { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${payload.imageBase64 ?? ''}` } },
           { type: 'text', text: '这是学生的课堂笔记照片。请先忠实识别照片中的内容，再按系统要求输出 StudyDeck JSON。' },
         ]
       : `请把以下学习资料解析为 StudyDeck JSON：\n<material>\n${payload.text}\n</material>`;
