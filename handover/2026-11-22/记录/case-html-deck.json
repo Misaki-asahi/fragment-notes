@@ -1,0 +1,22 @@
+{
+  "counts": {
+    "concepts": 6,
+    "confusions": 1,
+    "flashcards": 8,
+    "quizzes": 2
+  },
+  "createdAt": 1795255299545,
+  "quizzes": [
+    {
+      "a": "闭合",
+      "q": "恒定电流的电流线有什么特点？"
+    },
+    {
+      "a": "电荷守恒",
+      "q": "在恒定电流电路中，KCL 和 KVL 的物理依据分别是什么？"
+    }
+  ],
+  "summary": "从电荷定向漂移到多回路网络基尔霍夫方程组，构建“场—材料—电路”完整知识链条，涵盖恒定电流、电路模型、欧姆定律、焦耳定律、基尔霍夫方程等核心内容。",
+  "tag": "物理学",
+  "title": "ELECTROMAGNETISM · CHAPTER 04 STEADY CURRENT"
+}
