@@ -33,7 +33,7 @@ export function ConceptMatrix({ summary, concepts, confusions }: ConceptMatrixPr
                 <p className="mt-2 flex-1 break-words text-sm leading-relaxed text-ink-2">
                   {c.definition}
                 </p>
-                <span className="mt-3 self-start rounded-full bg-surface-2 px-2.5 py-1 text-xs font-bold text-gold">
+                <span className="mt-3 self-start rounded-full border border-edge bg-surface px-2.5 py-1 text-xs font-bold text-gold">
                   {c.keyPoint}
                 </span>
               </div>
@@ -68,7 +68,7 @@ export function ConceptMatrix({ summary, concepts, confusions }: ConceptMatrixPr
                     </p>
                   </div>
                 </div>
-                <p className="mt-3 flex items-start gap-2 rounded-sm bg-surface-2 p-3 text-sm font-bold leading-relaxed text-warn">
+                <p className="mt-3 flex items-start gap-2 rounded-sm border border-edge bg-surface p-3 text-sm font-bold leading-relaxed text-warn">
                   <Lightbulb className="mt-0.5 h-4 w-4 shrink-0" />
                   <span className="break-words">{c.distinctionTip}</span>
                 </p>
