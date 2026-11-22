@@ -28,7 +28,7 @@ npm run dev:all    # 同时启动前端（:5173）与本地 AI 转发层（:8000
 
 ## 技术栈
 
-React 18 + TypeScript + Vite · Tailwind CSS v4 · lucide-react · 浏览器 localStorage 持久化 · Serverless 转发层调用多模态大模型（API Key 不暴露在前端）
+React 18 + TypeScript + Vite · Tailwind CSS v4 · lucide-react · 浏览器 localStorage 持久化 · Serverless 转发层调用多模态大模型。
 
 ## 项目结构
 
