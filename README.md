@@ -16,10 +16,11 @@
 
 ```bash
 npm install
-npm run dev        # 打开 http://localhost:5173
+npm run dev        # 仅启动前端（http://localhost:5173）
+npm run dev:all    # 同时启动前端（:5173）与本地 AI 转发层（:8000）
 ```
 
-> 双击 `index.html` 可离线打开自包含展示页（无需服务器与网络）；开发实时预览用 `npm run dev`（http://localhost:5173），打包产物预览用 `npm run build && npm run preview`。
+> Windows 用户可直接双击根目录 `start.bat` 一键安装依赖（首次）并启动前后端；双击 `index.html` 可离线打开自包含展示页（无需服务器与网络），打包产物预览用 `npm run build && npm run preview`。
 
 内置计算机网络、高等数学、心理学三套完整示例牌组，无需配置任何密钥即可离线浏览。
 
