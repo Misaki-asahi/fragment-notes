@@ -44,4 +44,4 @@ React 18 + TypeScript + Vite · Tailwind CSS v4 · lucide-react · 浏览器 loc
 
 ## 环境变量
 
-复制 `.env.example` 为 `.env` 并填入 `AI_API_KEY`（仅供服务端转发层使用）。`.env` 已被 gitignore，请勿提交真实密钥。
+复制 `.env.example` 为 `.env` 并填入 `AI_API_KEY`（仅供服务端转发层使用）。
