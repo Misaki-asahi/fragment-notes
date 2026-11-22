@@ -384,12 +384,12 @@ export function SparkQuizView({
       {/* 卡片主体：模式 1 (3D 翻转概念卡) vs 模式 2 (高亮挖空卡) */}
       {card.mode === "flip" ? (
         <div className="pb-4">
-          <div className="relative h-[21rem] sm:h-[23rem]">
+          <div className="relative">
             {queue.length - cursor > 2 && <div className="flashcard-stack-2" aria-hidden="true" />}
             {queue.length - cursor > 1 && <div className="flashcard-stack-1" aria-hidden="true" />}
             <div
               key={`${card.id}-${cursor}`}
-              className="flashcard-stage flashcard-enter-next h-full w-full cursor-pointer select-none"
+              className="flashcard-stage flashcard-enter-next w-full cursor-pointer select-none"
               role="button"
               tabIndex={0}
               aria-pressed={flipped}
@@ -421,7 +421,7 @@ export function SparkQuizView({
                     </div>
                   </div>
 
-                  <div className="flex flex-1 items-center justify-center overflow-y-auto py-5">
+                  <div className="flex flex-1 items-center justify-center py-5">
                     <p className="break-words text-center text-lg font-bold leading-relaxed text-ink sm:text-xl">
                       {card.frontQuestion}
                     </p>
@@ -459,20 +459,20 @@ export function SparkQuizView({
                     </button>
                   </div>
 
-                  <div className="mt-4 flex-1 space-y-3.5 overflow-y-auto pr-1" aria-live="polite">
+                  <div className="mt-4 flex-1 space-y-3.5" aria-live="polite">
                     <p className="break-words text-sm leading-7 text-ink sm:text-base">
                       {card.backAnswer}
                     </p>
                     {extraAnalogies.map((txt, idx) => (
                       <p
                         key={idx}
-                        className="rounded-lg border tint-warn px-3.5 py-2.5 text-xs leading-relaxed text-ink"
+                        className="break-words rounded-lg border tint-warn px-3.5 py-2.5 text-xs leading-relaxed text-ink"
                       >
                         <span className="mr-1 font-bold text-warn">比喻 #{idx + 2}：</span>
                         {txt}
                       </p>
                     ))}
-                    <div className="rounded-lg bg-surface-2/80 px-3.5 py-2.5 text-xs text-ink-3">
+                    <div className="break-words rounded-lg bg-surface-2/80 px-3.5 py-2.5 text-xs leading-relaxed text-ink-3">
                       <span className="font-bold text-ink-2">原始笔记结论：</span>
                       {card.sourceExcerpt}
                     </div>
@@ -540,7 +540,7 @@ export function SparkQuizView({
             </p>
 
             {revealedIndices.size >= allClozeCount && allClozeCount > 0 && (
-              <div className="rounded-xl border tint-accent p-4 text-xs leading-relaxed text-ink">
+              <div className="break-words rounded-xl border tint-accent p-4 text-xs leading-relaxed text-ink">
                 <span className="font-bold text-accent">一句话结论：</span>
                 {card.sourceExcerpt}
                 <p className="mt-1.5 text-ink-2">{card.backAnswer}</p>
