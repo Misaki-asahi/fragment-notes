@@ -303,13 +303,47 @@ function sanitizeNoteText(text: string): string {
     .replace(/₂/g, "2");
 }
 
+function extractFullConclusion(cleanBody: string): string {
+  const firstSentence = cleanBody
+    .split(/[。！？\n]/)
+    .map((s) => s.trim())
+    .find((s) => s.length >= 6);
+  return firstSentence || cleanBody;
+}
+
+function restoreTruncatedConclusion(aiTitle: string, content: string): string {
+  const trimmedTitle = aiTitle.trim();
+  const trimmedContent = content.trim();
+  if (!trimmedTitle || !trimmedContent) return trimmedTitle;
+  if (trimmedTitle.endsWith("…") || trimmedTitle.endsWith("...")) {
+    const prefix = trimmedTitle.replace(/(?:…|\.{3})$/, "").trim();
+    if (prefix.length >= 6 && trimmedContent.startsWith(prefix)) {
+      return extractFullConclusion(trimmedContent);
+    }
+  }
+  return trimmedTitle;
+}
+
 function sanitizeNote(note: SparkNote): SparkNote {
+  const content = sanitizeNoteText(note.content);
+  const rawTitle = sanitizeNoteText(note.aiTitle);
+  const aiTitle = restoreTruncatedConclusion(rawTitle, content);
+  let plainExplanation = sanitizeNoteText(note.plainExplanation);
+  if (
+    aiTitle !== rawTitle &&
+    plainExplanation.includes("用自己的话把原句逻辑复述一遍：")
+  ) {
+    plainExplanation = plainExplanation.replace(
+      /用自己的话把原句逻辑复述一遍：.*$/,
+      `用自己的话把原句逻辑复述一遍：${aiTitle}。`,
+    );
+  }
   return {
     ...note,
-    content: sanitizeNoteText(note.content),
-    aiTitle: sanitizeNoteText(note.aiTitle),
+    content,
+    aiTitle,
     question: sanitizeNoteText(note.question),
-    plainExplanation: sanitizeNoteText(note.plainExplanation),
+    plainExplanation,
     clozeTerms: Array.isArray(note.clozeTerms) ? note.clozeTerms.map(sanitizeNoteText) : [],
     confusion: note.confusion
       ? {
@@ -432,7 +466,15 @@ export function loadSparkNotes(): SparkNote[] {
         }
         continue;
       }
-      result.push(sanitizeNote(item));
+      const cleaned = sanitizeNote(item);
+      if (
+        cleaned.content !== item.content ||
+        cleaned.aiTitle !== item.aiTitle ||
+        cleaned.plainExplanation !== item.plainExplanation
+      ) {
+        migrated = true;
+      }
+      result.push(cleaned);
     }
 
     if (result.length === 0) return INITIAL_SPARK_NOTES;
@@ -531,19 +573,12 @@ export function enrichDraftToNote(rawText: string, id = `sn-${Date.now()}`): Spa
   const tags = explicitTags.length > 0 ? explicitTags : [fallbackTag];
   const clozeTerms = pickClozeTerms(cleanBody);
 
-  // 生成一句话结论式标题
-  const firstClause = cleanBody
-    .split(/[。！？\n；]/)
-    .map((s) => s.trim())
-    .find((s) => s.length >= 6) ?? cleanBody.slice(0, 34);
-  const aiTitle =
-    firstClause.length > 34
-      ? `${firstClause.slice(0, 33)}…`
-      : firstClause;
+  // 生成完整的一句话结论，长句不截断
+  const aiTitle = extractFullConclusion(cleanBody);
 
   const anchor = clozeTerms[0] ?? tags[0] ?? "这段笔记";
   const question = `请结合核心要点解释「${anchor}」在这条笔记中的关键作用或判别边界？`;
-  const plainExplanation = `核心记忆锚点是「${clozeTerms.join(" / ") || anchor}」。用自己的话把原句逻辑复述一遍：${firstClause}。`;
+  const plainExplanation = `核心记忆锚点是「${clozeTerms.join(" / ") || anchor}」。用自己的话把原句逻辑复述一遍：${aiTitle}。`;
 
   return {
     id,
@@ -569,7 +604,7 @@ export function deckToSparkNotes(deck: StudyDeck): SparkNote[] {
     return {
       id: `${deck.id}-sn-${idx}-${now}`,
       content: `${c.term}：${c.definition}（${c.keyPoint}）`,
-      aiTitle: c.keyPoint.length > 36 ? `${c.term} · ${c.keyPoint.slice(0, 30)}…` : `${c.term} · ${c.keyPoint}`,
+      aiTitle: c.keyPoint ? `${c.term} · ${c.keyPoint}` : c.term,
       tags: [deck.subjectTag, c.term.slice(0, 10)],
       cluster,
       clozeTerms: [c.term].filter(Boolean),
