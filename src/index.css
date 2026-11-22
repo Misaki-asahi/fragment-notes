@@ -4,71 +4,83 @@
 @import "@fontsource/lato/700.css";
 @import "@fontsource/lato/900.css";
 
-/* 语义令牌：组件只允许使用语义类名（bg-surface / text-ink / border-edge ...），
-   换肤只改这里两套变量值，不改任何组件。视觉语言参考 zws.im：深紫底、饱和紫按钮、
-   波浪线 + 点阵 + 光斑、粗体无衬线、小圆角。 */
-:root {
-  color-scheme: dark;
-  --void: #0d0620;
-  --surface: #140a2e;
-  --surface-2: #301b66;
-  --edge: #483775;
-  --edge-2: #5b4a8f;
-  --ink: #f8f5ff;
-  --ink-2: #dcd5f0;
-  --ink-3: #a99cc9;
-  --accent: #9b77ff;
-  --accent-2: #7e4fff;
-  --accent-3: #4413cb;
-  --gold: #f5c76a;
-  --ok: #4ade80;
-  --warn: #facc15;
-  --bad: #f87171;
-  --spot: radial-gradient(50% 50%, rgba(126, 79, 255, 0.1) 22.4%, rgba(126, 79, 255, 0) 100%);
-  --dots: radial-gradient(circle, rgba(155, 119, 255, 0.35) 1px, transparent 1.6px);
-  --tint-alpha: 13%;
-  --panel-bg: linear-gradient(180deg, color-mix(in srgb, var(--surface) 88%, var(--surface-2)) 0%, var(--surface) 100%);
-  --card-bg: linear-gradient(155deg, color-mix(in srgb, var(--surface-2) 62%, var(--surface)) 0%, color-mix(in srgb, var(--surface) 92%, var(--surface-2)) 100%);
-  --card-sheen: rgba(248, 245, 255, 0.09);
-  --card-shadow: 0 10px 28px -10px rgba(4, 1, 14, 0.72), 0 1px 0 inset var(--card-sheen);
-  --card-shadow-hover: 0 20px 44px -12px rgba(4, 1, 14, 0.84), 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent), 0 0 28px -6px rgba(126, 79, 255, 0.34), 0 1px 0 inset rgba(248, 245, 255, 0.16);
-  --flashcard-front: radial-gradient(120% 90% at 15% 0%, rgba(155, 119, 255, 0.24) 0%, transparent 56%), linear-gradient(160deg, #271554 0%, #170c36 62%, #120829 100%);
-  --flashcard-back: radial-gradient(110% 85% at 85% 0%, rgba(74, 222, 128, 0.13) 0%, transparent 52%), linear-gradient(165deg, #1c1040 0%, #12092a 100%);
-  --btn-bg: linear-gradient(135deg, var(--accent-2) 0%, var(--accent-3) 100%);
-  --btn-shadow: 0 6px 20px -4px rgba(68, 19, 203, 0.65), 0 1px 0 inset rgba(255, 255, 255, 0.22);
-  --btn-shadow-hover: 0 10px 26px -4px rgba(126, 79, 255, 0.68), 0 1px 0 inset rgba(255, 255, 255, 0.3);
-}
-
+/* 语义令牌：极简模块化卡片美学（默认暖白纸感浅色 + 一键切换深邃紫韵暗色），
+   所有配色、渐变、热力图阶梯与光影由 CSS 变量驱动，组件严禁硬编码颜色。 */
+:root,
 [data-theme="light"] {
   color-scheme: light;
-  --void: #f8f5ff;
+  --void: #f7f7f4;
   --surface: #ffffff;
-  --surface-2: #ede7ff;
-  --edge: #dcd5f0;
-  --edge-2: #c9bfe8;
-  --ink: #140a2e;
-  --ink-2: #483775;
-  --ink-3: #6b5a9e;
-  --accent: #4413cb;
-  --accent-2: #7e4fff;
-  --accent-3: #4413cb;
+  --surface-2: #f1f1ec;
+  --edge: #e5e5df;
+  --edge-2: #d4d4cc;
+  --ink: #18181b;
+  --ink-2: #52525b;
+  --ink-3: #71717a;
+  --accent: #047857;
+  --accent-2: #10b981;
+  --accent-3: #059669;
+  --ai-indigo: #4f46e5;
   --gold: #b45309;
-  --ok: #059669;
+  --ok: #047857;
   --warn: #b45309;
-  --bad: #e11d48;
-  --spot: radial-gradient(50% 50%, rgba(126, 79, 255, 0.08) 22.4%, rgba(126, 79, 255, 0) 100%);
-  --dots: radial-gradient(circle, rgba(68, 19, 203, 0.22) 1px, transparent 1.6px);
-  --tint-alpha: 8%;
-  --panel-bg: linear-gradient(180deg, #ffffff 0%, #faf8ff 100%);
-  --card-bg: linear-gradient(155deg, #ffffff 0%, #f3eeff 100%);
-  --card-sheen: rgba(255, 255, 255, 0.95);
-  --card-shadow: 0 6px 22px -8px rgba(48, 27, 102, 0.11), 0 1px 2px rgba(48, 27, 102, 0.05);
-  --card-shadow-hover: 0 18px 38px -12px rgba(68, 19, 203, 0.18), 0 0 0 1px color-mix(in srgb, var(--accent) 34%, transparent), 0 4px 18px -4px rgba(126, 79, 255, 0.14);
-  --flashcard-front: radial-gradient(120% 90% at 15% 0%, rgba(126, 79, 255, 0.14) 0%, transparent 56%), linear-gradient(160deg, #ffffff 0%, #f1ecff 100%);
-  --flashcard-back: radial-gradient(110% 85% at 85% 0%, rgba(5, 150, 105, 0.11) 0%, transparent 52%), linear-gradient(165deg, #ffffff 0%, #f2faf6 100%);
-  --btn-bg: linear-gradient(135deg, var(--accent-2) 0%, var(--accent-3) 100%);
-  --btn-shadow: 0 6px 18px -4px rgba(68, 19, 203, 0.35), 0 1px 0 inset rgba(255, 255, 255, 0.25);
-  --btn-shadow-hover: 0 10px 24px -4px rgba(68, 19, 203, 0.45), 0 1px 0 inset rgba(255, 255, 255, 0.34);
+  --bad: #be123c;
+  --heat-0: #eaeae4;
+  --heat-1: #d1fae5;
+  --heat-2: #6ee7b7;
+  --heat-3: #34d399;
+  --heat-4: #059669;
+  --spot: radial-gradient(50% 50%, rgba(16, 185, 129, 0.06) 20%, rgba(16, 185, 129, 0) 100%);
+  --dots: radial-gradient(circle, rgba(24, 24, 27, 0.14) 1px, transparent 1.2px);
+  --tint-alpha: 10%;
+  --panel-bg: #ffffff;
+  --card-bg: #ffffff;
+  --card-sheen: rgba(255, 255, 255, 0.9);
+  --card-shadow: 0 1px 2px rgba(24, 24, 27, 0.04), 0 4px 12px -2px rgba(24, 24, 27, 0.03);
+  --card-shadow-hover: 0 10px 24px -8px rgba(24, 24, 27, 0.09), 0 1px 3px rgba(24, 24, 27, 0.04);
+  --flashcard-front: linear-gradient(160deg, #ffffff 0%, #f4fbf7 100%);
+  --flashcard-back: linear-gradient(160deg, #ffffff 0%, #f5f6ff 100%);
+  --btn-bg: linear-gradient(135deg, #059669 0%, #047857 100%);
+  --btn-shadow: 0 2px 10px -2px rgba(5, 150, 105, 0.35);
+  --btn-shadow-hover: 0 6px 16px -3px rgba(4, 120, 87, 0.42);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --void: #0d0620;
+  --surface: #150c30;
+  --surface-2: #24154c;
+  --edge: #362564;
+  --edge-2: #4d3886;
+  --ink: #e6dff5;
+  --ink-2: #c4badb;
+  --ink-3: #998db8;
+  --accent: #c4b5fd;
+  --accent-2: #8b5cf6;
+  --accent-3: #6d28d9;
+  --ai-indigo: #e2b0ff;
+  --gold: #f5ce80;
+  --ok: #7ce8be;
+  --warn: #f8cf6e;
+  --bad: #fca5b6;
+  --heat-0: #24164a;
+  --heat-1: #064e3b;
+  --heat-2: #047857;
+  --heat-3: #10b981;
+  --heat-4: #34d399;
+  --spot: radial-gradient(50% 50%, rgba(126, 79, 255, 0.12) 20%, rgba(126, 79, 255, 0) 100%);
+  --dots: radial-gradient(circle, rgba(167, 139, 250, 0.22) 1px, transparent 1.2px);
+  --tint-alpha: 14%;
+  --panel-bg: #150c30;
+  --card-bg: #150c30;
+  --card-sheen: rgba(248, 245, 255, 0.06);
+  --card-shadow: 0 4px 18px -4px rgba(5, 2, 16, 0.55);
+  --card-shadow-hover: 0 12px 28px -6px rgba(5, 2, 16, 0.72), 0 0 0 1px rgba(167, 139, 250, 0.25);
+  --flashcard-front: radial-gradient(120% 90% at 15% 0%, rgba(155, 119, 255, 0.2) 0%, transparent 56%), linear-gradient(160deg, #21124a 0%, #140a2e 100%);
+  --flashcard-back: radial-gradient(110% 85% at 85% 0%, rgba(192, 132, 252, 0.16) 0%, transparent 52%), linear-gradient(165deg, #1b0f3e 0%, #12082a 100%);
+  --btn-bg: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+  --btn-shadow: 0 4px 16px -3px rgba(126, 79, 255, 0.45);
+  --btn-shadow-hover: 0 8px 22px -3px rgba(126, 79, 255, 0.58);
 }
 
 @theme inline {
@@ -83,6 +95,7 @@
   --color-accent: var(--accent);
   --color-accent-2: var(--accent-2);
   --color-accent-3: var(--accent-3);
+  --color-ai: var(--ai-indigo);
   --color-gold: var(--gold);
   --color-ok: var(--ok);
   --color-warn: var(--warn);
@@ -101,6 +114,11 @@
     background-color: var(--site-bg, var(--void));
     color: var(--site-fg, var(--ink));
     font-family: var(--site-font, var(--font-sans));
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--accent-2) 32%, transparent);
+    color: var(--ink);
   }
 
   /* 主题化滚动条 */
@@ -134,35 +152,35 @@
     box-shadow: var(--card-shadow);
   }
 
-  /* 展示与交互卡片：渐变紫面 + 顶部微光边 + 悬停上浮 */
+  /* 展示与交互卡片：极简模块化克制阴影 */
   .edge-glow {
-    @apply relative overflow-hidden rounded-lg;
+    @apply relative overflow-hidden rounded-xl;
     background: var(--card-bg);
     border: 1px solid var(--edge);
     box-shadow: var(--card-shadow);
     transition:
-      transform 0.22s cubic-bezier(0.2, 0.7, 0.2, 1),
-      border-color 0.22s,
-      box-shadow 0.22s;
+      transform 0.2s cubic-bezier(0.2, 0.7, 0.2, 1),
+      border-color 0.2s,
+      box-shadow 0.2s;
   }
   .edge-glow::before {
     content: "";
     position: absolute;
     inset: 0 0 auto 0;
     height: 1px;
-    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 72%, var(--ink)), transparent);
-    opacity: 0.45;
-    transition: opacity 0.22s;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent-2) 55%, transparent), transparent);
+    opacity: 0.25;
+    transition: opacity 0.2s;
     pointer-events: none;
     z-index: 1;
   }
   .edge-glow:hover {
-    transform: translateY(-4px);
-    border-color: color-mix(in srgb, var(--accent) 52%, var(--edge-2));
+    transform: translateY(-2px);
+    border-color: var(--edge-2);
     box-shadow: var(--card-shadow-hover);
   }
   .edge-glow:hover::before {
-    opacity: 1;
+    opacity: 0.75;
   }
 
   /* 面板内子卡片 */
@@ -183,9 +201,10 @@
     @apply mt-5 mb-10 w-32 border-t-2 border-accent;
   }
 
-  /* 主按钮：渐变饱和紫 + 圆角 + 立体光影 */
+  /* 主按钮：翡翠绿 + 圆角 + 高对比纯白字 */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 font-bold text-ink transition-all duration-200;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 font-bold transition-all duration-200;
+    color: #ffffff;
     background: var(--btn-bg);
     box-shadow: var(--btn-shadow);
   }
@@ -201,9 +220,6 @@
     opacity: 0.5;
     cursor: not-allowed;
     box-shadow: none;
-  }
-  [data-theme="light"] .btn-primary {
-    color: #f8f5ff;
   }
 
   /* 次按钮：柔和圆角描边 */
@@ -251,6 +267,52 @@
   .tint-gold {
     background-color: color-mix(in srgb, var(--gold) var(--tint-alpha), var(--surface));
     border-color: color-mix(in srgb, var(--gold) 34%, var(--edge));
+  }
+  .tint-ai {
+    background-color: color-mix(in srgb, var(--ai-indigo) var(--tint-alpha), var(--surface));
+    border-color: color-mix(in srgb, var(--ai-indigo) 32%, var(--edge));
+    color: var(--ai-indigo);
+  }
+
+  /* Heptabase 风格点阵白板背景 */
+  .whiteboard-grid {
+    background-image: radial-gradient(circle, var(--edge-2) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  /* Gizmo 风格挖空遮罩与揭晓态 */
+  .cloze-hidden {
+    @apply mx-1 inline-flex cursor-pointer items-center gap-1 rounded-md border border-dashed px-2.5 py-0.5 font-mono text-xs font-bold transition-all;
+    background-color: color-mix(in srgb, var(--ai-indigo) 12%, var(--surface-2));
+    border-color: color-mix(in srgb, var(--ai-indigo) 45%, var(--edge-2));
+    color: transparent;
+    text-shadow: 0 0 8px color-mix(in srgb, var(--ai-indigo) 50%, transparent);
+    user-select: none;
+  }
+  .cloze-hidden:hover {
+    border-color: var(--ai-indigo);
+    background-color: color-mix(in srgb, var(--ai-indigo) 18%, var(--surface-2));
+  }
+  .cloze-revealed {
+    @apply mx-1 inline-flex items-center rounded-md border px-2 py-0.5 font-bold transition-all;
+    background-color: color-mix(in srgb, var(--accent-2) var(--tint-alpha), var(--surface));
+    border-color: color-mix(in srgb, var(--accent-2) 45%, var(--edge));
+    color: var(--accent);
+  }
+
+  /* AI 流式提炼微动效 */
+  .ai-shimmer {
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--ai-indigo) 8%, var(--surface-2)) 0%,
+      color-mix(in srgb, var(--ai-indigo) 22%, var(--surface-2)) 50%,
+      color-mix(in srgb, var(--ai-indigo) 8%, var(--surface-2)) 100%
+    );
+    background-size: 200% 100%;
+    animation: ai-shimmer-slide 1.4s linear infinite;
+  }
+  .streak-pop {
+    animation: streak-pop 0.42s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   /* 物理堆叠 3D 记忆闪卡 */
@@ -331,7 +393,7 @@
   }
   .flashcard-face-back {
     background: var(--flashcard-back);
-    border-color: color-mix(in srgb, var(--ok) 36%, var(--edge));
+    border-color: color-mix(in srgb, var(--ai-indigo) 36%, var(--edge));
     transform: rotateY(180deg);
   }
   .flashcard-enter-next {
@@ -388,12 +450,12 @@
   }
   .site-shell .btn-primary {
     background: var(--site-accent, var(--btn-bg));
-    color: var(--site-on-accent, var(--ink));
+    color: var(--site-on-accent, #ffffff);
     border-radius: var(--site-radius, 8px);
     transition-duration: calc(150ms * var(--site-motion, 1));
   }
   [data-theme="light"] .site-shell .btn-primary {
-    color: var(--site-on-accent, #f8f5ff);
+    color: var(--site-on-accent, #ffffff);
   }
   .site-shell .kicker,
   .site-shell .text-accent {
@@ -470,6 +532,25 @@
   100% {
     transform: scale(1.38);
     opacity: 0;
+  }
+}
+@keyframes ai-shimmer-slide {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+@keyframes streak-pop {
+  0% {
+    transform: scale(0.92);
+  }
+  50% {
+    transform: scale(1.16);
+  }
+  100% {
+    transform: scale(1);
   }
 }
 @keyframes typing {

@@ -5,7 +5,7 @@ const STORAGE_KEY = "fb-theme";
 
 export function ThemeToggle() {
   const [theme, setTheme] = useState<"dark" | "light">(
-    () => (localStorage.getItem(STORAGE_KEY) === "light" ? "light" : "dark"),
+    () => (localStorage.getItem(STORAGE_KEY) === "dark" ? "dark" : "light"),
   );
 
   useEffect(() => {
