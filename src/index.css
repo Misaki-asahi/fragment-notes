@@ -26,6 +26,17 @@
   --bad: #f87171;
   --spot: radial-gradient(50% 50%, rgba(126, 79, 255, 0.1) 22.4%, rgba(126, 79, 255, 0) 100%);
   --dots: radial-gradient(circle, rgba(155, 119, 255, 0.35) 1px, transparent 1.6px);
+  --tint-alpha: 13%;
+  --panel-bg: linear-gradient(180deg, color-mix(in srgb, var(--surface) 88%, var(--surface-2)) 0%, var(--surface) 100%);
+  --card-bg: linear-gradient(155deg, color-mix(in srgb, var(--surface-2) 62%, var(--surface)) 0%, color-mix(in srgb, var(--surface) 92%, var(--surface-2)) 100%);
+  --card-sheen: rgba(248, 245, 255, 0.09);
+  --card-shadow: 0 10px 28px -10px rgba(4, 1, 14, 0.72), 0 1px 0 inset var(--card-sheen);
+  --card-shadow-hover: 0 20px 44px -12px rgba(4, 1, 14, 0.84), 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent), 0 0 28px -6px rgba(126, 79, 255, 0.34), 0 1px 0 inset rgba(248, 245, 255, 0.16);
+  --flashcard-front: radial-gradient(120% 90% at 15% 0%, rgba(155, 119, 255, 0.24) 0%, transparent 56%), linear-gradient(160deg, #271554 0%, #170c36 62%, #120829 100%);
+  --flashcard-back: radial-gradient(110% 85% at 85% 0%, rgba(74, 222, 128, 0.13) 0%, transparent 52%), linear-gradient(165deg, #1c1040 0%, #12092a 100%);
+  --btn-bg: linear-gradient(135deg, var(--accent-2) 0%, var(--accent-3) 100%);
+  --btn-shadow: 0 6px 20px -4px rgba(68, 19, 203, 0.65), 0 1px 0 inset rgba(255, 255, 255, 0.22);
+  --btn-shadow-hover: 0 10px 26px -4px rgba(126, 79, 255, 0.68), 0 1px 0 inset rgba(255, 255, 255, 0.3);
 }
 
 [data-theme="light"] {
@@ -47,6 +58,17 @@
   --bad: #e11d48;
   --spot: radial-gradient(50% 50%, rgba(126, 79, 255, 0.08) 22.4%, rgba(126, 79, 255, 0) 100%);
   --dots: radial-gradient(circle, rgba(68, 19, 203, 0.22) 1px, transparent 1.6px);
+  --tint-alpha: 8%;
+  --panel-bg: linear-gradient(180deg, #ffffff 0%, #faf8ff 100%);
+  --card-bg: linear-gradient(155deg, #ffffff 0%, #f3eeff 100%);
+  --card-sheen: rgba(255, 255, 255, 0.95);
+  --card-shadow: 0 6px 22px -8px rgba(48, 27, 102, 0.11), 0 1px 2px rgba(48, 27, 102, 0.05);
+  --card-shadow-hover: 0 18px 38px -12px rgba(68, 19, 203, 0.18), 0 0 0 1px color-mix(in srgb, var(--accent) 34%, transparent), 0 4px 18px -4px rgba(126, 79, 255, 0.14);
+  --flashcard-front: radial-gradient(120% 90% at 15% 0%, rgba(126, 79, 255, 0.14) 0%, transparent 56%), linear-gradient(160deg, #ffffff 0%, #f1ecff 100%);
+  --flashcard-back: radial-gradient(110% 85% at 85% 0%, rgba(5, 150, 105, 0.11) 0%, transparent 52%), linear-gradient(165deg, #ffffff 0%, #f2faf6 100%);
+  --btn-bg: linear-gradient(135deg, var(--accent-2) 0%, var(--accent-3) 100%);
+  --btn-shadow: 0 6px 18px -4px rgba(68, 19, 203, 0.35), 0 1px 0 inset rgba(255, 255, 255, 0.25);
+  --btn-shadow-hover: 0 10px 24px -4px rgba(68, 19, 203, 0.45), 0 1px 0 inset rgba(255, 255, 255, 0.34);
 }
 
 @theme inline {
@@ -104,22 +126,51 @@
 }
 
 @layer components {
-  /* 卡片：zws 统计_tile 语言 —— 实色紫面 + 小圆角 */
-  .edge-glow {
-    @apply rounded-md bg-surface-2;
+  /* 静态大容器面板：柔和背景与高光边框，无悬停跳动 */
+  .panel-shell {
+    @apply rounded-xl;
+    background: var(--panel-bg);
     border: 1px solid var(--edge);
+    box-shadow: var(--card-shadow);
+  }
+
+  /* 展示与交互卡片：渐变紫面 + 顶部微光边 + 悬停上浮 */
+  .edge-glow {
+    @apply relative overflow-hidden rounded-lg;
+    background: var(--card-bg);
+    border: 1px solid var(--edge);
+    box-shadow: var(--card-shadow);
     transition:
-      transform 0.2s cubic-bezier(0.2, 0.7, 0.2, 1),
-      border-color 0.2s,
-      box-shadow 0.2s;
+      transform 0.22s cubic-bezier(0.2, 0.7, 0.2, 1),
+      border-color 0.22s,
+      box-shadow 0.22s;
+  }
+  .edge-glow::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 72%, var(--ink)), transparent);
+    opacity: 0.45;
+    transition: opacity 0.22s;
+    pointer-events: none;
+    z-index: 1;
   }
   .edge-glow:hover {
-    transform: translateY(-3px);
-    border-color: var(--edge-2);
-    box-shadow: 0 12px 32px rgba(13, 6, 32, 0.45);
+    transform: translateY(-4px);
+    border-color: color-mix(in srgb, var(--accent) 52%, var(--edge-2));
+    box-shadow: var(--card-shadow-hover);
   }
-  [data-theme="light"] .edge-glow:hover {
-    box-shadow: 0 12px 32px rgba(68, 19, 203, 0.14);
+  .edge-glow:hover::before {
+    opacity: 1;
+  }
+
+  /* 面板内子卡片 */
+  .card-flat {
+    @apply rounded-lg border border-edge bg-surface transition-colors duration-200;
+  }
+  .card-flat:hover {
+    border-color: var(--edge-2);
   }
 
   /* 分区小标签：粗体链接紫 */
@@ -132,18 +183,162 @@
     @apply mt-5 mb-10 w-32 border-t-2 border-accent;
   }
 
-  /* 主按钮：饱和紫 + 小圆角 + 粗体 */
+  /* 主按钮：渐变饱和紫 + 圆角 + 立体光影 */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-sm bg-accent-3 px-6 py-3 font-bold text-ink transition;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 font-bold text-ink transition-all duration-200;
+    background: var(--btn-bg);
+    box-shadow: var(--btn-shadow);
   }
-  .btn-primary:hover {
-    opacity: 0.9;
+  .btn-primary:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.06);
+    box-shadow: var(--btn-shadow-hover);
   }
-  .btn-primary:active {
-    opacity: 0.8;
+  .btn-primary:active:not(:disabled) {
+    transform: translateY(0) scale(0.99);
+  }
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
   }
   [data-theme="light"] .btn-primary {
     color: #f8f5ff;
+  }
+
+  /* 次按钮：柔和圆角描边 */
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-edge bg-surface px-4 py-2 text-xs font-bold text-ink-2 transition-all duration-200 sm:text-sm;
+  }
+  .btn-secondary:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--accent) 60%, var(--edge));
+    background-color: color-mix(in srgb, var(--surface-2) 60%, var(--surface));
+    color: var(--ink);
+  }
+  .btn-secondary:active:not(:disabled) {
+    transform: scale(0.99);
+  }
+  .btn-secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* 渐变强调字（用于大号统计数字等） */
+  .accent-grad-text {
+    background: linear-gradient(135deg, var(--ink) 12%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* 语义色柔和底色与描边 */
+  .tint-accent {
+    background-color: color-mix(in srgb, var(--accent) var(--tint-alpha), var(--surface));
+    border-color: color-mix(in srgb, var(--accent) 34%, var(--edge));
+  }
+  .tint-ok {
+    background-color: color-mix(in srgb, var(--ok) var(--tint-alpha), var(--surface));
+    border-color: color-mix(in srgb, var(--ok) 34%, var(--edge));
+  }
+  .tint-warn {
+    background-color: color-mix(in srgb, var(--warn) var(--tint-alpha), var(--surface));
+    border-color: color-mix(in srgb, var(--warn) 34%, var(--edge));
+  }
+  .tint-bad {
+    background-color: color-mix(in srgb, var(--bad) var(--tint-alpha), var(--surface));
+    border-color: color-mix(in srgb, var(--bad) 34%, var(--edge));
+  }
+  .tint-gold {
+    background-color: color-mix(in srgb, var(--gold) var(--tint-alpha), var(--surface));
+    border-color: color-mix(in srgb, var(--gold) 34%, var(--edge));
+  }
+
+  /* 物理堆叠 3D 记忆闪卡 */
+  .flashcard-stage {
+    perspective: 1400px;
+    position: relative;
+    z-index: 2;
+  }
+  .flashcard-stack-1,
+  .flashcard-stack-2 {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    border-radius: 14px;
+    border: 1px solid var(--edge);
+    background: var(--card-bg);
+  }
+  .flashcard-stack-1 {
+    transform: translateY(8px) scale(0.965);
+    opacity: 0.58;
+    z-index: 1;
+  }
+  .flashcard-stack-2 {
+    transform: translateY(16px) scale(0.93);
+    opacity: 0.3;
+    z-index: 0;
+  }
+  .flashcard-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.62s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .flashcard-inner.is-flipped {
+    transform: rotateY(180deg);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .flashcard-stage:hover .flashcard-inner:not(.is-flipped) {
+      transform: translateY(-3px);
+    }
+  }
+  .flashcard-face {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    border-radius: 14px;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--edge));
+    box-shadow: var(--card-shadow);
+    display: flex;
+    flex-direction: column;
+  }
+  .flashcard-face-front {
+    background: var(--flashcard-front);
+  }
+  .flashcard-face-front::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 75%, var(--ink)), transparent);
+    opacity: 0.7;
+    pointer-events: none;
+  }
+  .flashcard-face-front::after {
+    content: "";
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    width: 72px;
+    height: 72px;
+    background-image: var(--dots);
+    background-size: 12px 12px;
+    opacity: 0.28;
+    pointer-events: none;
+  }
+  .flashcard-face-back {
+    background: var(--flashcard-back);
+    border-color: color-mix(in srgb, var(--ok) 36%, var(--edge));
+    transform: rotateY(180deg);
+  }
+  .flashcard-enter-next {
+    animation: fc-enter-next 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .flashcard-enter-prev {
+    animation: fc-enter-prev 0.32s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   /* 点阵装饰 */
@@ -183,22 +378,22 @@
 }
 
   .site-shell .edge-glow {
-    background-color: var(--site-surface, var(--surface-2));
+    background: var(--site-surface, var(--card-bg));
     border-color: var(--site-border, var(--edge));
-    border-radius: var(--site-radius, 6px);
+    border-radius: var(--site-radius, 10px);
     transition-duration: calc(200ms * var(--site-motion, 1));
   }
   .site-shell .edge-glow:hover {
-    border-color: var(--site-border, var(--edge-2));
+    border-color: var(--site-border, color-mix(in srgb, var(--accent) 52%, var(--edge-2)));
   }
   .site-shell .btn-primary {
-    background-color: var(--site-accent, var(--accent-3));
+    background: var(--site-accent, var(--btn-bg));
     color: var(--site-on-accent, var(--ink));
-    border-radius: var(--site-radius, 4px);
+    border-radius: var(--site-radius, 8px);
     transition-duration: calc(150ms * var(--site-motion, 1));
   }
   [data-theme="light"] .site-shell .btn-primary {
-    color: var(--site-on-accent, var(--void));
+    color: var(--site-on-accent, #f8f5ff);
   }
   .site-shell .kicker,
   .site-shell .text-accent {
@@ -236,6 +431,47 @@
     }
   }
 
+@keyframes fc-enter-next {
+  from {
+    opacity: 0;
+    transform: translateX(22px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fc-enter-prev {
+  from {
+    opacity: 0;
+    transform: translateX(-22px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes rookie-breathe {
+  0%,
+  100% {
+    transform: scale(0.76);
+    opacity: 0.72;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+@keyframes rookie-ripple {
+  0% {
+    transform: scale(0.84);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(1.38);
+    opacity: 0;
+  }
+}
 @keyframes typing {
   to {
     width: calc(var(--chars, 20) * 1em);
@@ -259,6 +495,9 @@
   .reveal {
     opacity: 1;
     transform: none;
+    transition: none;
+  }
+  .flashcard-inner {
     transition: none;
   }
   *,

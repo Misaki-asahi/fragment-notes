@@ -8,6 +8,7 @@ import {
   Layers,
   ListChecks,
   RotateCcw,
+  Sparkles,
   Timer,
 } from "lucide-react";
 import { UploadZone } from "../components/core/UploadZone";
@@ -67,6 +68,7 @@ export function WorkspacePage() {
   const [lastPayload, setLastPayload] = useState<DeckPayload | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
+  const [hasByok, setHasByok] = useState(() => Boolean(getByok()));
   const [retryQuestions, setRetryQuestions] = useState<StudyDeck["quizzes"] | undefined>();
   const generationLock = useRef(false);
 
@@ -107,17 +109,18 @@ export function WorkspacePage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-6 pb-20 pt-10">
+    <div className="mx-auto max-w-6xl px-4 pb-20 pt-8 sm:px-6 sm:pt-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="kicker">Workspace · 工作台</p>
-          <h1 className="mt-2 font-display text-2xl font-extralight tracking-[0.04em] text-ink">
+          <h1 className="mt-1.5 font-display text-2xl font-bold tracking-tight text-ink">
             碎片笔记 · 学习工作台
           </h1>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
           <button
-            type="button" disabled={!deck}
+            type="button"
+            disabled={!deck}
             onClick={() => {
               if (!deck) return;
               const url = URL.createObjectURL(new Blob([JSON.stringify(deck, null, 2)], { type: "application/json" }));
@@ -127,8 +130,33 @@ export function WorkspacePage() {
               anchor.click();
               setTimeout(() => URL.revokeObjectURL(url), 1000);
             }}
-            className="inline-flex items-center gap-2 border border-edge px-4 py-2 font-mono text-xs text-ink-2 transition-colors hover:border-accent disabled:opacity-50"
-          ><Download className="h-3.5 w-3.5" />导出牌组</button>
+            className="btn-secondary"
+          >
+            <Download className="h-3.5 w-3.5" />
+            导出牌组
+          </button>
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            className="btn-secondary"
+          >
+            <History className="h-3.5 w-3.5" />
+            历史牌组
+            <span className="rounded-full bg-surface-2 px-1.5 py-0.5 text-[11px] font-bold text-ink-2 tabular-nums">
+              {decks.length}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setAiSettingsOpen(true)}
+            className="btn-secondary"
+          >
+            <KeyRound className="h-3.5 w-3.5" />
+            AI 设置
+            {hasByok && (
+              <span className="h-2 w-2 rounded-full bg-ok" title="已启用自定义 API 设置" aria-label="已启用自定义 API 设置" />
+            )}
+          </button>
           <button
             type="button"
             onClick={() => {
@@ -136,42 +164,30 @@ export function WorkspacePage() {
               setView("quiz");
             }}
             disabled={!deck || generating}
-            className="inline-flex items-center gap-2 border border-edge px-4 py-2 font-mono text-xs tracking-wider text-ink-2 transition-colors hover:border-accent hover:text-ink disabled:opacity-50"
+            className="btn-primary !px-4 !py-2 text-xs sm:text-sm"
           >
-            <Timer className="h-3.5 w-3.5" />
+            <Timer className="h-4 w-4" />
             3 分钟小测
-          </button>
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(true)}
-            className="inline-flex items-center gap-2 border border-edge px-4 py-2 font-mono text-xs tracking-wider text-ink-2 transition-colors hover:border-accent hover:text-ink"
-          >
-            <History className="h-3.5 w-3.5" />
-            历史牌组
-          </button>
-          <button
-            type="button"
-            onClick={() => setAiSettingsOpen(true)}
-            className="inline-flex items-center gap-2 border border-edge px-4 py-2 font-mono text-xs tracking-wider text-ink-2 transition-colors hover:border-accent hover:text-ink"
-          >
-            <KeyRound className="h-3.5 w-3.5" />
-            AI 设置
           </button>
         </div>
       </div>
 
-      <div className="mt-8 space-y-6">
-        {storageError && <p role="alert" className="border border-warn p-3 text-sm text-warn">{storageError}</p>}
+      <div className="mt-6 space-y-6">
+        {storageError && (
+          <p role="alert" className="rounded-lg border tint-warn p-3.5 text-sm font-medium text-warn">
+            {storageError}
+          </p>
+        )}
         <UploadZone busy={generating} onSubmit={(p) => void generate(p)} />
 
         {error && (
-          <section className="edge-glow p-5" role="alert">
-            <p className="flex items-start gap-2 text-sm leading-relaxed text-bad">
+          <section className="panel-shell rounded-xl border tint-bad p-5" role="alert">
+            <p className="flex items-start gap-2 text-sm font-semibold leading-relaxed text-bad">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
               {error.message}
             </p>
             {errorHint(error) && (
-              <p className="mt-2 pl-6 font-mono text-[11px] leading-relaxed tracking-wider text-ink-3">
+              <p className="mt-2 pl-6 font-mono text-[11px] leading-relaxed tracking-wider text-ink-2">
                 {errorHint(error)}
               </p>
             )}
@@ -180,7 +196,7 @@ export function WorkspacePage() {
                 type="button"
                 onClick={() => void generate(lastPayload)}
                 disabled={generating}
-                className="mt-4 inline-flex items-center gap-2 border border-edge-2 px-4 py-1.5 font-mono text-xs tracking-wider text-ink-2 transition-colors hover:border-accent hover:text-ink disabled:opacity-50"
+                className="btn-secondary mt-4"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
                 重试
@@ -198,10 +214,13 @@ export function WorkspacePage() {
             setView("quiz");
           }} />
         ) : (
-          <section className="edge-glow p-8 text-center">
-            <p className="text-sm text-ink-2">还没有牌组</p>
-            <p className="mt-2 font-mono text-[11px] tracking-wider text-ink-3">
-              上传资料或点「一键填入示例」，生成第一份学习牌组
+          <section className="panel-shell p-8 text-center sm:p-10">
+            <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border tint-accent text-accent">
+              <Sparkles className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <p className="mt-4 text-base font-bold text-ink">还没有牌组</p>
+            <p className="mt-2 text-xs text-ink-3 sm:text-sm">
+              在上方上传资料或点「一键填入示例」，生成第一份学习牌组
             </p>
           </section>
         )}
@@ -215,7 +234,15 @@ export function WorkspacePage() {
         onSelect={selectDeck}
         onDelete={deleteDeck}
       />}
-      {aiSettingsOpen && <AiSettingsDialog open={aiSettingsOpen} onClose={() => setAiSettingsOpen(false)} />}
+      {aiSettingsOpen && (
+        <AiSettingsDialog
+          open={aiSettingsOpen}
+          onClose={() => {
+            setAiSettingsOpen(false);
+            setHasByok(Boolean(getByok()));
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -235,37 +262,64 @@ function DeckWorkspace({
 }) {
   const mastered = deck.flashcards.filter((c) => c.status === "mastered").length;
   return (
-    <section className="edge-glow p-5 sm:p-6">
+    <section className="panel-shell p-5 sm:p-6">
       <div className="flex flex-wrap items-center gap-3">
-        <span className="border border-edge px-2.5 py-0.5 font-mono text-[11px] tracking-wider text-accent-2">
+        <span className="inline-block rounded-md border tint-accent px-2.5 py-1 text-xs font-bold text-accent">
           {deck.subjectTag}
         </span>
-        <h2 className="font-display text-lg font-semibold leading-snug text-ink">{deck.title}</h2>
+        <h2 className="font-display text-lg font-bold leading-snug text-ink sm:text-xl">{deck.title}</h2>
       </div>
       {deck.sourceSummary && (
         <p className="mt-3 text-sm leading-relaxed text-ink-2">{deck.sourceSummary}</p>
       )}
-      <p className="mt-3 font-mono text-[11px] tracking-wider text-ink-3">
-        CONCEPTS {deck.concepts.length} · CONFUSIONS {deck.confusions.length} · FLASHCARDS{" "}
-        {deck.flashcards.length}（已掌握 {mastered}）· QUIZZES {deck.quizzes.length}
-      </p>
+      <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-bold text-ink-3">
+        <span className="rounded-md border border-edge bg-surface px-2.5 py-1">概念 {deck.concepts.length}</span>
+        <span className="rounded-md border border-edge bg-surface px-2.5 py-1">易混 {deck.confusions.length}</span>
+        <span className="rounded-md border border-edge bg-surface px-2.5 py-1">
+          闪卡 已掌握 {mastered} / {deck.flashcards.length}
+        </span>
+        <span className="rounded-md border border-edge bg-surface px-2.5 py-1">自测 {deck.quizzes.length}</span>
+      </div>
 
-      <div className="mt-5 flex flex-wrap gap-1 border-b border-edge">
-        {TABS.map(({ key, label, icon: Icon }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => onTab(key)}
-            className={`-mb-px inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm transition-colors ${
-              tab === key
-                ? "border-accent font-semibold text-ink"
-                : "border-transparent text-ink-3 hover:text-ink-2"
-            }`}
-          >
-            <Icon className="h-4 w-4" />
-            {label}
-          </button>
-        ))}
+      <div className="mt-5 flex flex-wrap gap-1.5 rounded-xl border border-edge bg-void/50 p-1.5">
+        {TABS.map(({ key, label, icon: Icon }) => {
+          const active = tab === key;
+          const badge =
+            key === "cards"
+              ? deck.flashcards.length
+              : key === "wrong" && wrongItems.length > 0
+                ? wrongItems.length
+                : null;
+          return (
+            <button
+              key={key}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onTab(key)}
+              className={`inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-xs transition-all sm:text-sm ${
+                active
+                  ? "border-accent/40 bg-surface font-bold text-accent shadow-sm"
+                  : "border-transparent font-semibold text-ink-3 hover:text-ink"
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+              {badge !== null && (
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-[11px] font-bold tabular-nums ${
+                    key === "wrong"
+                      ? "tint-bad text-bad"
+                      : active
+                        ? "tint-accent text-accent"
+                        : "bg-surface-2 text-ink-2"
+                  }`}
+                >
+                  {badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       <div className="mt-6">
@@ -309,19 +363,19 @@ function WrongTab({ wrongItems, onRetry }: { wrongItems: WrongItem[]; onRetry: (
   return (
     <div className="flex flex-col gap-4">
       {analogyErr && (
-        <p role="alert" className="border border-bad p-3 text-sm text-bad">
+        <p role="alert" className="rounded-lg border tint-bad p-3.5 text-sm font-medium text-bad">
           比喻生成失败，请稍后再试：{analogyErr}
         </p>
       )}
       {wrongItems.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-[11px] tracking-wider text-ink-3">重做此题：</span>
+        <div className="card-flat flex flex-wrap items-center gap-2 p-3.5">
+          <span className="text-xs font-bold text-ink-3">重做此题：</span>
           {wrongItems.map((item) => (
             <button
               key={item.id}
               type="button"
               onClick={() => onRetry(item)}
-              className="inline-flex items-center gap-1.5 border border-edge px-3 py-1 font-mono text-[11px] text-ink-2 transition-colors hover:border-accent hover:text-ink"
+              className="inline-flex items-center gap-1.5 rounded-full border border-edge bg-surface-2/50 px-3 py-1 text-xs font-semibold text-ink-2 transition-colors hover:border-accent hover:text-accent"
             >
               <RotateCcw className="h-3 w-3" />
               {item.quiz.question.slice(0, 14)}…

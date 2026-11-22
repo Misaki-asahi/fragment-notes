@@ -109,13 +109,13 @@ export function QuizEngine({ deck, retryQuestions, onExit }: Props) {
 
   if (deck.quizzes.length === 0) {
     return (
-      <div className="mx-auto max-w-3xl px-6 pb-20 pt-10">
-        <section className="edge-glow p-8 text-center">
-          <p className="text-sm text-ink-2">这份牌组没有自测题，无法开始小测</p>
+      <div className="mx-auto max-w-3xl px-4 pb-20 pt-8 sm:px-6 sm:pt-10">
+        <section className="panel-shell p-8 text-center">
+          <p className="text-sm font-semibold text-ink-2">这份牌组没有自测题，无法开始小测</p>
           <button
             type="button"
             onClick={() => onExit()}
-            className="mt-4 border border-edge px-4 py-2 font-mono text-xs tracking-wider text-ink-2 transition-colors hover:border-accent hover:text-ink"
+            className="btn-secondary mt-4"
           >
             返回工作台
           </button>
@@ -126,23 +126,23 @@ export function QuizEngine({ deck, retryQuestions, onExit }: Props) {
 
   if (phase === "intro") {
     return (
-      <div className="mx-auto max-w-3xl px-6 pb-20 pt-10">
-        <section className="edge-glow p-6 sm:p-8">
+      <div className="mx-auto max-w-3xl px-4 pb-20 pt-8 sm:px-6 sm:pt-10">
+        <section className="panel-shell p-6 sm:p-8">
           <p className="kicker">Quiz · 3 分钟小测</p>
-          <h1 className="mt-2 font-display text-xl font-light tracking-wide text-ink">
+          <h1 className="mt-2 font-display text-xl font-bold tracking-tight text-ink sm:text-2xl">
             {deck.title}
           </h1>
-          <ul className="mt-5 space-y-2 text-sm leading-relaxed text-ink-2">
-            <li className="flex items-center gap-2">
-              <Timer className="h-4 w-4 shrink-0 text-accent-2" />
+          <ul className="mt-5 space-y-2.5 text-sm leading-relaxed text-ink-2">
+            <li className="card-flat flex items-center gap-3 p-3.5">
+              <Timer className="h-4 w-4 shrink-0 text-accent" />
               限时 {QUIZ_SECONDS} 秒，共 {(retryQuestions ?? deck.quizzes).length} 题，超时自动交卷
             </li>
-            <li className="flex items-center gap-2">
-              <ListChecks className="h-4 w-4 shrink-0 text-accent-2" />
+            <li className="card-flat flex items-center gap-3 p-3.5">
+              <ListChecks className="h-4 w-4 shrink-0 text-accent" />
               每题 4 选 1，选完即判并进入下一题
             </li>
-            <li className="flex items-center gap-2">
-              <XCircle className="h-4 w-4 shrink-0 text-accent-2" />
+            <li className="card-flat flex items-center gap-3 p-3.5">
+              <XCircle className="h-4 w-4 shrink-0 text-accent" />
               答错与未作答自动收入大白话错题本，可重做、可换比喻
             </li>
           </ul>
@@ -150,7 +150,7 @@ export function QuizEngine({ deck, retryQuestions, onExit }: Props) {
             <button
               type="button"
               onClick={() => start(retryQuestions ?? null)}
-              className="inline-flex items-center gap-2 bg-accent px-5 py-2 text-sm font-semibold text-void transition-opacity hover:opacity-90"
+              className="btn-primary !px-5 !py-2.5 text-sm"
             >
               <Timer className="h-4 w-4" />
               开始小测
@@ -158,7 +158,7 @@ export function QuizEngine({ deck, retryQuestions, onExit }: Props) {
             <button
               type="button"
               onClick={() => onExit()}
-              className="inline-flex items-center gap-2 border border-edge px-4 py-2 font-mono text-xs tracking-wider text-ink-2 transition-colors hover:border-accent hover:text-ink"
+              className="btn-secondary"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
               返回工作台
@@ -174,54 +174,63 @@ export function QuizEngine({ deck, retryQuestions, onExit }: Props) {
     const progress = ((QUIZ_SECONDS - remaining) / QUIZ_SECONDS) * 100;
     const urgent = remaining <= 30;
     return (
-      <div className="mx-auto max-w-3xl px-6 pb-20 pt-10">
-        <section className="edge-glow p-6 sm:p-8">
+      <div className="mx-auto max-w-3xl px-4 pb-20 pt-8 sm:px-6 sm:pt-10">
+        <section className="panel-shell p-6 sm:p-8">
           <div className="flex items-center justify-between gap-4">
             <p className="kicker">
               {retryMode ? "错题重做" : "Quiz"} · {index + 1} / {questions.length}
             </p>
             <p
-              className={`inline-flex items-center gap-1.5 font-mono text-sm font-semibold tabular-nums ${
-                urgent ? "text-bad" : "text-accent-2"
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-xs font-bold tabular-nums ${
+                urgent ? "tint-bad text-bad" : "tint-accent text-accent"
               }`}
               aria-live="polite"
             >
-              <Timer className="h-4 w-4" />
+              <Timer className="h-3.5 w-3.5" />
               {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, "0")}
             </p>
           </div>
-          <div className="mt-3 h-1 w-full bg-surface-2">
+          <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
             <div
-              className={`h-full transition-all duration-1000 ${urgent ? "bg-bad" : "bg-accent"}`}
+              className={`h-full rounded-full transition-all duration-1000 ${
+                urgent ? "bg-bad" : "bg-gradient-to-r from-accent-3 via-accent-2 to-accent"
+              }`}
               style={{ width: `${progress}%` }}
             />
           </div>
 
-          <h2 className="mt-6 text-base font-semibold leading-relaxed text-ink">{q.question}</h2>
+          <h2 className="mt-6 text-base font-bold leading-relaxed text-ink sm:text-lg">{q.question}</h2>
           <div className="mt-5 space-y-3">
             {q.options.map((option, i) => {
               const isPicked = picked === i;
               const isAnswer = i === q.answerIndex;
               const revealed = picked !== null;
-              let cls = "border-edge hover:border-edge-2 hover:bg-surface-2";
-              if (revealed && isAnswer) cls = "border-ok bg-surface-2";
-              else if (revealed && isPicked) cls = "border-bad bg-surface-2";
-              else if (revealed) cls = "border-edge opacity-60";
+              let cls = "border-edge bg-surface hover:border-accent/50 hover:bg-surface-2/50";
+              let badgeCls = "border-edge bg-surface-2/60 text-ink-3";
+              if (revealed && isAnswer) {
+                cls = "tint-ok";
+                badgeCls = "tint-ok text-ok";
+              } else if (revealed && isPicked) {
+                cls = "tint-bad";
+                badgeCls = "tint-bad text-bad";
+              } else if (revealed) {
+                cls = "border-edge bg-surface opacity-55";
+              }
               return (
                 <button
                   key={i}
                   type="button"
                   disabled={revealed}
                   onClick={() => pick(i)}
-                  className={`flex w-full items-start gap-3 border p-3.5 text-left text-sm leading-relaxed text-ink transition-colors ${cls}`}
+                  className={`flex w-full items-start gap-3 rounded-xl border p-3.5 text-left text-sm leading-relaxed text-ink transition-all sm:p-4 ${cls}`}
                 >
-                  <span className="shrink-0 font-mono text-xs text-ink-3">
+                  <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border font-mono text-xs font-bold ${badgeCls}`}>
                     {String.fromCharCode(65 + i)}
                   </span>
-                  <span className="min-w-0 flex-1">{option}</span>
-                  {revealed && isAnswer && <CheckCircle2 className="h-4 w-4 shrink-0 text-ok" />}
+                  <span className="min-w-0 flex-1 break-words font-medium">{option}</span>
+                  {revealed && isAnswer && <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-ok" />}
                   {revealed && isPicked && !isAnswer && (
-                    <XCircle className="h-4 w-4 shrink-0 text-bad" />
+                    <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-bad" />
                   )}
                 </button>
               );
@@ -232,7 +241,7 @@ export function QuizEngine({ deck, retryQuestions, onExit }: Props) {
             <button
               type="button"
               onClick={() => submit(answersRef.current)}
-              className="border border-edge px-4 py-1.5 font-mono text-xs tracking-wider text-ink-3 transition-colors hover:border-edge-2 hover:text-ink-2"
+              className="btn-secondary !px-3.5 !py-1.5 text-xs"
             >
               提前交卷
             </button>
@@ -251,18 +260,20 @@ export function QuizEngine({ deck, retryQuestions, onExit }: Props) {
   const pct = Math.round((correct / questions.length) * 100);
 
   return (
-    <div className="mx-auto max-w-3xl px-6 pb-20 pt-10">
-      <section className="edge-glow p-6 sm:p-8">
+    <div className="mx-auto max-w-3xl px-4 pb-20 pt-8 sm:px-6 sm:pt-10">
+      <section className="panel-shell p-6 sm:p-8">
         <p className="kicker">Result · 判分</p>
-        <div className="mt-3 flex flex-wrap items-baseline gap-4">
-          <p className="font-display text-4xl font-extralight text-ink">
-            {correct}
-            <span className="text-lg text-ink-3"> / {questions.length}</span>
-          </p>
-          <p className={`font-mono text-sm font-semibold ${pct >= 60 ? "text-ok" : "text-warn"}`}>
-            正确率 {pct}%
-          </p>
-          <p className="font-mono text-[11px] tracking-wider text-ink-3">
+        <div className={`mt-4 flex flex-wrap items-center justify-between gap-4 rounded-xl border p-5 ${pct >= 60 ? "tint-ok" : "tint-warn"}`}>
+          <div className="flex items-baseline gap-3">
+            <p className="font-display text-4xl font-black text-ink tabular-nums">
+              {correct}
+              <span className="text-lg font-bold text-ink-3"> / {questions.length}</span>
+            </p>
+            <span className={`rounded-full border px-3 py-0.5 font-mono text-xs font-bold ${pct >= 60 ? "tint-ok text-ok" : "tint-warn text-warn"}`}>
+              正确率 {pct}%
+            </span>
+          </div>
+          <p className="font-mono text-xs font-semibold tracking-wider text-ink-2 tabular-nums">
             用时 {Math.floor(used / 60)}:{String(used % 60).padStart(2, "0")}
             {remaining <= 0 && " · 超时自动交卷"}
           </p>
@@ -273,27 +284,29 @@ export function QuizEngine({ deck, retryQuestions, onExit }: Props) {
             <p className="kicker">Wrong · {wrongList.length} 题已收入错题本</p>
             <ul className="mt-4 space-y-4">
               {wrongList.map(({ q, choice }) => (
-                <li key={q.id} className="border border-edge p-4">
-                  <p className="text-sm font-semibold leading-snug text-ink">{q.question}</p>
-                  <p className="mt-2 text-xs leading-relaxed text-ink-2">
+                <li key={q.id} className="rounded-xl border border-edge bg-surface p-4 sm:p-5">
+                  <p className="text-sm font-bold leading-snug text-ink sm:text-base">{q.question}</p>
+                  <p className="mt-2.5 text-xs leading-relaxed text-ink-2">
                     你的答案：
-                    <span className="text-bad">
+                    <span className="font-bold text-bad">
                       {choice === null || choice < 0 ? "未作答" : q.options[choice]}
                     </span>
                     {" · "}正确答案：
-                    <span className="text-ok">{q.options[q.answerIndex]}</span>
+                    <span className="font-bold text-ok">{q.options[q.answerIndex]}</span>
                   </p>
-                  <p className="mt-2 text-sm leading-relaxed text-ink-2">{q.plainExplanation}</p>
-                  <p className="mt-1.5 text-xs leading-relaxed text-ink-3">{q.standardExplanation}</p>
+                  <div className="mt-3 rounded-lg border border-l-4 border-l-warn tint-warn p-3 text-sm leading-relaxed text-ink">
+                    {q.plainExplanation}
+                  </div>
+                  <p className="mt-2.5 text-xs leading-relaxed text-ink-3">{q.standardExplanation}</p>
                 </li>
               ))}
             </ul>
           </div>
         ) : (
-          <p className="mt-6 flex items-center gap-2 text-sm text-ok">
-            <CheckCircle2 className="h-4 w-4" />
+          <div className="mt-6 flex items-center gap-2.5 rounded-xl border tint-ok p-4 text-sm font-bold text-ok">
+            <CheckCircle2 className="h-5 w-5 shrink-0" />
             全对！这份牌组暂时难不倒你
-          </p>
+          </div>
         )}
 
         <div className="mt-7 flex flex-wrap gap-3">
@@ -301,7 +314,7 @@ export function QuizEngine({ deck, retryQuestions, onExit }: Props) {
             <button
               type="button"
               onClick={() => start(wrongList.map(({ q }) => q))}
-              className="inline-flex items-center gap-2 bg-accent px-5 py-2 text-sm font-semibold text-void transition-opacity hover:opacity-90"
+              className="btn-primary !px-5 !py-2.5 text-sm"
             >
               <RotateCcw className="h-4 w-4" />
               错题重做（{wrongList.length}）
@@ -310,7 +323,7 @@ export function QuizEngine({ deck, retryQuestions, onExit }: Props) {
           <button
             type="button"
             onClick={() => start(retryQuestions ?? null)}
-            className="inline-flex items-center gap-2 border border-edge px-4 py-2 font-mono text-xs tracking-wider text-ink-2 transition-colors hover:border-accent hover:text-ink"
+            className="btn-secondary"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             再测一次
@@ -319,7 +332,7 @@ export function QuizEngine({ deck, retryQuestions, onExit }: Props) {
             <button
               type="button"
               onClick={() => onExit("wrong")}
-              className="inline-flex items-center gap-2 border border-edge px-4 py-2 font-mono text-xs tracking-wider text-ink-2 transition-colors hover:border-accent-2 hover:text-ink"
+              className="btn-secondary"
             >
               <ListChecks className="h-3.5 w-3.5" />
               去错题本换比喻
@@ -328,7 +341,7 @@ export function QuizEngine({ deck, retryQuestions, onExit }: Props) {
           <button
             type="button"
             onClick={() => onExit()}
-            className="inline-flex items-center gap-2 border border-edge px-4 py-2 font-mono text-xs tracking-wider text-ink-2 transition-colors hover:border-accent hover:text-ink"
+            className="btn-secondary"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             返回工作台
