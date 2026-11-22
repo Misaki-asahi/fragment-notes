@@ -128,7 +128,7 @@ export function FocusTimerBar() {
           {mm}:{ss}
         </span>
 
-        {running && <span className="text-xs font-bold text-accent-2">专注复习中 ✨</span>}
+        {running && <span className="text-xs font-bold text-accent">专注复习中 ✨</span>}
         {!running && started && <span className="text-xs font-bold text-ink-3">已暂停</span>}
 
         {!started && (

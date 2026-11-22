@@ -84,10 +84,10 @@ export function FlashCardDeck({ cards, onUpdateStatus }: FlashCardDeckProps) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="kicker">记忆闪卡</p>
         <div className="flex items-center gap-2">
-          <span className={`rounded-full bg-surface-2 px-2.5 py-0.5 text-xs font-bold ${difficulty.className}`}>
+          <span className={`rounded-full border border-edge bg-surface px-2.5 py-0.5 text-xs font-bold ${difficulty.className}`}>
             {difficulty.label}
           </span>
-          <span className="rounded-full bg-surface-2 px-2.5 py-0.5 text-xs font-bold text-ink-2">
+          <span className="rounded-full border border-edge bg-surface px-2.5 py-0.5 text-xs font-bold text-ink-2">
             {STATUS_LABEL[card.status]}
           </span>
           <span className="text-xs font-bold text-ink-3">
@@ -140,26 +140,26 @@ export function FlashCardDeck({ cards, onUpdateStatus }: FlashCardDeckProps) {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex items-center gap-1.5 sm:gap-3">
         <button
           type="button"
           aria-label="上一张"
           onClick={() => goTo(safeIndex - 1)}
-          className="shrink-0 rounded-sm border border-edge bg-surface p-2.5 text-ink-2 transition hover:border-edge-2 hover:text-accent active:opacity-70"
+          className="shrink-0 rounded-sm border border-edge bg-surface p-2 text-ink-2 transition hover:border-edge-2 hover:text-accent active:opacity-70 sm:p-2.5"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
         <button
           type="button"
           onClick={() => markAndNext("review")}
-          className="min-w-0 flex-1 truncate rounded-sm border border-edge bg-surface px-3 py-2.5 text-sm font-bold text-ink-2 transition hover:border-edge-2 hover:text-warn active:opacity-70"
+          className="min-w-0 flex-1 truncate rounded-sm border border-edge bg-surface px-2 py-2.5 text-xs font-bold text-ink-2 transition hover:border-edge-2 hover:text-warn active:opacity-70 sm:px-3 sm:text-sm"
         >
           😅 还要再记
         </button>
         <button
           type="button"
           onClick={() => markAndNext("mastered")}
-          className="btn-primary min-w-0 flex-1 truncate px-3 py-2.5 text-sm"
+          className="btn-primary min-w-0 flex-1 truncate px-2 py-2.5 text-xs sm:px-3 sm:text-sm"
         >
           ✅ 我已掌握
         </button>
@@ -167,7 +167,7 @@ export function FlashCardDeck({ cards, onUpdateStatus }: FlashCardDeckProps) {
           type="button"
           aria-label="下一张"
           onClick={() => goTo(safeIndex + 1)}
-          className="shrink-0 rounded-sm border border-edge bg-surface p-2.5 text-ink-2 transition hover:border-edge-2 hover:text-accent active:opacity-70"
+          className="shrink-0 rounded-sm border border-edge bg-surface p-2 text-ink-2 transition hover:border-edge-2 hover:text-accent active:opacity-70 sm:p-2.5"
         >
           <ChevronRight className="h-4 w-4" />
         </button>

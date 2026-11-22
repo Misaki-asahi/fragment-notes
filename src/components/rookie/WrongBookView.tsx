@@ -55,7 +55,7 @@ export function WrongBookView({ wrongItems, onRemove, onAskMoreAnalogy }: WrongB
         const loading = loadingId === item.id;
         return (
           <article key={item.id} className="rounded-md border border-edge bg-surface p-5">
-            <span className="rounded-sm bg-surface-2 px-2.5 py-1 text-xs font-bold text-accent">
+            <span className="rounded-sm border border-edge bg-surface px-2.5 py-1 text-xs font-bold text-accent">
               {item.deckTitle}
             </span>
             <p className="mt-3 break-words font-bold leading-relaxed">{quiz.question}</p>
@@ -67,12 +67,12 @@ export function WrongBookView({ wrongItems, onRemove, onAskMoreAnalogy }: WrongB
                 return (
                   <li
                     key={i}
-                    className={`flex items-start gap-2 rounded-sm px-3 py-2 text-sm leading-relaxed ${
+                    className={`flex items-start gap-2 rounded-sm border border-edge px-3 py-2 text-sm leading-relaxed ${
                       isWrongPick
-                        ? "bg-surface-2 font-bold text-bad"
+                        ? "bg-surface font-bold text-bad"
                         : isCorrect
-                          ? "bg-surface-2 font-bold text-ok"
-                          : "text-ink-2"
+                          ? "bg-surface font-bold text-ok"
+                          : "border-transparent text-ink-2"
                     }`}
                   >
                     {isWrongPick ? (
@@ -90,7 +90,7 @@ export function WrongBookView({ wrongItems, onRemove, onAskMoreAnalogy }: WrongB
               })}
             </ul>
 
-            <div className="mt-4 rounded-sm border-l-2 border-warn bg-surface-2 p-4">
+            <div className="mt-4 rounded-sm border border-edge border-l-2 border-l-warn bg-surface p-4">
               <p className="text-xs font-bold text-warn">大白话原理</p>
               <p className="mt-1.5 break-words text-sm leading-relaxed text-ink-2">
                 {quiz.plainExplanation}
