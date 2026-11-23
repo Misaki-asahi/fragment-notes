@@ -22,13 +22,13 @@ npm run dev:all    # 同时启动前端（:5173）与本地 AI 转发层（:8000
 
 > Windows 用户可直接双击根目录 `start.bat` 一键安装依赖（首次）并启动前后端；双击 `index.html` 可离线打开自包含展示页（无需服务器与网络），打包产物预览用 `npm run build && npm run preview`。
 
-内置计算机网络、高等数学、心理学三套完整示例牌组，无需配置任何密钥即可离线浏览。
+内置计算机网络、高等数学、心理学等多套完整示例牌组，无需配置任何密钥即可离线浏览。
 
 > 当前进度：核心闭环已上线——多源输入 → AI 四件套 → 概念/3D 闪卡 → 3 分钟小测 → 大白话错题本；公网部署即将开放。
 
 ## 技术栈
 
-React 18 + TypeScript + Vite · Tailwind CSS v4 · lucide-react · 浏览器 localStorage 持久化 · Serverless 转发层调用多模态大模型（API Key 不暴露在前端）
+React 18 + TypeScript + Vite · Tailwind CSS v4 · lucide-react · 浏览器 localStorage 持久化 · Serverless 转发层调用多模态大模型。
 
 ## 项目结构
 
@@ -44,4 +44,4 @@ React 18 + TypeScript + Vite · Tailwind CSS v4 · lucide-react · 浏览器 loc
 
 ## 环境变量
 
-复制 `.env.example` 为 `.env` 并填入 `AI_API_KEY`（仅供服务端转发层使用）。`.env` 已被 gitignore，请勿提交真实密钥。
+复制 `.env.example` 为 `.env` 并填入 `AI_API_KEY`（仅供服务端转发层使用）。
