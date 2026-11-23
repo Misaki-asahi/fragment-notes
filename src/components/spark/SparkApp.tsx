@@ -8,6 +8,7 @@ import { SparkClustersBoard } from "./SparkClustersBoard";
 import { SparkComposer } from "./SparkComposer";
 import { SparkNoteCard } from "./SparkNoteCard";
 import { SparkQuizView } from "./SparkQuizView";
+import { usePomodoro } from "./usePomodoro";
 import { SparkRelatedPanel } from "./SparkRelatedPanel";
 import { SparkSidebar, type SparkView } from "./SparkSidebar";
 import {
@@ -45,6 +46,7 @@ export function SparkApp() {
   const [hasByok, setHasByok] = useState(() => Boolean(getByok()));
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [mobileRelatedOpen, setMobileRelatedOpen] = useState(false);
+  const pomodoro = usePomodoro();
 
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -198,6 +200,7 @@ export function SparkApp() {
       setMobileNavOpen(false);
     },
     quizCount: notes.length,
+    pomodoro,
   };
 
   return (
@@ -208,9 +211,15 @@ export function SparkApp() {
           type="button"
           aria-label="打开导航与标签栏"
           onClick={() => setMobileNavOpen(true)}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-edge bg-surface text-ink-2"
+          className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-edge bg-surface text-ink-2"
         >
           <Menu className="h-4 w-4" />
+          {pomodoro.state.running && (
+            <span
+              className="absolute right-1.5 top-1.5 h-2 w-2 animate-pulse rounded-full bg-accent-2"
+              aria-hidden="true"
+            />
+          )}
         </button>
 
         <div className="flex items-center gap-2">
