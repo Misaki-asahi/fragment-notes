@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Flame, GitBranch, Menu, Sparkles, X } from "lucide-react";
+import { AlertTriangle, Flame, GitBranch, Menu, Sparkles, X } from "lucide-react";
 import { generateDeck } from "../../api/generateDeck";
 import { getByok } from "../../utils/byok";
 import { fileToPayload } from "../../utils/fileParser";
@@ -50,13 +50,11 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
   const [hasByok, setHasByok] = useState(() => Boolean(getByok()));
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [mobileRelatedOpen, setMobileRelatedOpen] = useState(false);
+  const [storageWarning, setStorageWarning] = useState<string | null>(null);
   const pomodoro = usePomodoro();
 
+  const notesRef = useRef(notes);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-
-  useEffect(() => {
-    saveSparkNotes(notes);
-  }, [notes]);
 
   useEffect(() => {
     const timers = timersRef.current;
@@ -64,6 +62,18 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
       for (const t of timers) clearTimeout(t);
     };
   }, []);
+
+  function commitNotes(updater: (prev: SparkNote[]) => SparkNote[]) {
+    const next = updater(notesRef.current);
+    notesRef.current = next;
+    setNotes(next);
+    const saved = saveSparkNotes(next);
+    setStorageWarning(
+      saved
+        ? null
+        : "本地保存失败，刷新可能丢失本次修改；请检查浏览器存储空间或隐私模式权限。",
+    );
+  }
 
   const activeNote = useMemo(
     () => notes.find((n) => n.id === selectedNoteId) ?? notes[0] ?? null,
@@ -89,16 +99,18 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
 
   function scheduleAiFinish(noteId: string) {
     const timer = setTimeout(() => {
-      setNotes((prev) =>
-        prev.map((n) => (n.id === noteId ? { ...n, aiProcessing: false } : n)),
+      const next = notesRef.current.map((n) =>
+        n.id === noteId ? { ...n, aiProcessing: false } : n,
       );
+      notesRef.current = next;
+      setNotes(next);
     }, 650);
     timersRef.current.push(timer);
   }
 
   function publishNote(rawText: string) {
     const created = enrichDraftToNote(rawText);
-    setNotes((prev) => [created, ...prev]);
+    commitNotes((prev) => [created, ...prev]);
     setSelectedNoteId(created.id);
     setDraft("");
     setSelectedTag(null);
@@ -117,7 +129,7 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
       try {
         const deck = await generateDeck(payload);
         const generated = deckToSparkNotes(deck);
-        setNotes((prev) => [...generated, ...prev]);
+        commitNotes((prev) => [...generated, ...prev]);
         setSelectedNoteId(generated[0].id);
         setView("stream");
         setUploadNotice(`已通过 AI 解析「${file.name}」，生成 ${generated.length} 张结构化碎片卡片`);
@@ -128,7 +140,7 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
             ? payload.text.slice(0, 260)
             : `已解析学习资料「${file.name}」：请对照资料提炼核心概念、易混对比与自测记忆点。 #资料解析`;
         const localNote = enrichDraftToNote(rawSource);
-        setNotes((prev) => [localNote, ...prev]);
+        commitNotes((prev) => [localNote, ...prev]);
         setSelectedNoteId(localNote.id);
         scheduleAiFinish(localNote.id);
         setUploadNotice(`已提取「${file.name}」内容并完成本地提炼（配置 API 后可调用远端多模态深度解析）`);
@@ -289,6 +301,26 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
               view === "clusters" ? "max-w-[960px]" : "max-w-[700px]"
             }`}
           >
+            {storageWarning && (
+              <div
+                role="alert"
+                className="mb-5 flex items-center justify-between gap-3 rounded-xl border tint-warn bg-surface px-4 py-3 text-xs font-semibold text-warn shadow-xs"
+              >
+                <span className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  {storageWarning}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setStorageWarning(null)}
+                  aria-label="关闭存储提示"
+                  className="shrink-0 rounded p-1 opacity-75 transition hover:opacity-100"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+
             {view === "stream" && (
               <div className="space-y-6">
                 {/* 中等桌面（1024~1279px）右栏收起时提供快速开启关联面板的提示条 */}
@@ -366,7 +398,7 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
                         selected={note.id === activeNote?.id}
                         onSelect={(n) => setSelectedNoteId(n.id)}
                         onToggleStar={(id) =>
-                          setNotes((prev) =>
+                          commitNotes((prev) =>
                             prev.map((item) =>
                               item.id === id ? { ...item, starred: !item.starred } : item,
                             ),

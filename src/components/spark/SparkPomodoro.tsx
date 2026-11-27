@@ -128,7 +128,7 @@ export function SparkPomodoro({ pomodoro }: SparkPomodoroProps) {
                 className={`rounded-md py-1 font-mono text-[11px] transition-colors ${
                   active
                     ? "bg-surface font-bold text-accent shadow-xs"
-                    : "font-medium text-ink-3 hover:text-ink"
+                    : "font-medium text-ink-2 hover:text-ink"
                 }`}
               >
                 {m}m
@@ -142,7 +142,7 @@ export function SparkPomodoro({ pomodoro }: SparkPomodoroProps) {
             className={`rounded-md py-1 font-mono text-[11px] transition-colors ${
               isBreak
                 ? "bg-surface font-bold text-ok shadow-xs"
-                : "font-medium text-ink-3 hover:text-ink"
+                : "font-medium text-ink-2 hover:text-ink"
             }`}
           >
             5m休

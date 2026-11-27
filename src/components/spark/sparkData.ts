@@ -485,12 +485,13 @@ export function loadSparkNotes(): SparkNote[] {
   }
 }
 
-export function saveSparkNotes(notes: SparkNote[]): void {
+export function saveSparkNotes(notes: SparkNote[]): boolean {
   try {
     const clean = notes.map(({ aiProcessing: _omit, ...rest }) => rest);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(clean));
+    return true;
   } catch {
-    // 隐私模式或超限时静默降级，不打断演示
+    return false;
   }
 }
 

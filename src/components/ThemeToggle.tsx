@@ -4,10 +4,14 @@ import { useEffect, useState } from "react";
 const STORAGE_KEY = "fb-theme";
 
 function readTheme(): "dark" | "light" {
-  return document.documentElement.dataset.theme === "dark" ||
-    localStorage.getItem(STORAGE_KEY) === "dark"
-    ? "dark"
-    : "light";
+  try {
+    return document.documentElement.dataset.theme === "dark" ||
+      localStorage.getItem(STORAGE_KEY) === "dark"
+      ? "dark"
+      : "light";
+  } catch {
+    return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+  }
 }
 
 export function ThemeToggle() {
