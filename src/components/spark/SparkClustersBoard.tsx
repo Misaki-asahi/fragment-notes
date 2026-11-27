@@ -91,7 +91,7 @@ export function SparkClustersBoard({
                 <div className="flex items-center gap-2.5">
                   <span className="h-2.5 w-2.5 rounded-full bg-accent-2" aria-hidden="true" />
                   <h3 className="text-sm font-bold text-ink">{clusterName}</h3>
-                  <span className="rounded-full bg-surface-2 px-2 py-0.5 font-mono text-[11px] font-bold text-ink-3">
+                  <span className="rounded-full bg-surface-2 px-2 py-0.5 font-mono text-[11px] font-bold text-ink-2">
                     {items.length}
                   </span>
                 </div>
@@ -173,7 +173,7 @@ export function SparkClustersBoard({
                           <p className="mt-1 leading-relaxed text-ink-2">{c.itemBFeature}</p>
                         </div>
                       </div>
-                      <p className="mt-2 rounded-lg border tint-warn px-2.5 py-1.5 text-[11px] font-bold text-warn">
+                      <p className="mt-2 rounded-lg border tint-warn bg-surface px-2.5 py-1.5 text-[11px] font-bold text-warn">
                         {c.distinctionTip}
                       </p>
                     </div>
