@@ -35,6 +35,7 @@ interface SparkSidebarProps {
   onOpenSettings: () => void;
   quizCount: number;
   pomodoro: PomodoroController;
+  onReturnLanding?: () => void;
 }
 
 export function SparkSidebar({
@@ -53,6 +54,7 @@ export function SparkSidebar({
   onOpenSettings,
   quizCount,
   pomodoro,
+  onReturnLanding,
 }: SparkSidebarProps) {
   const [showAllTags, setShowAllTags] = useState(false);
   const [expandedParents, setExpandedParents] = useState<Set<string>>(() => new Set(["高数"]));
@@ -85,15 +87,32 @@ export function SparkSidebar({
     <aside className="flex h-full flex-col gap-5 overflow-y-auto px-5 py-5" aria-label="导航与知识状态">
       {/* 顶部品牌区 + API 设置 + 主题切换 */}
       <div className="flex shrink-0 items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent-3 text-white shadow-sm">
-            <Sparkles className="h-4 w-4" aria-hidden="true" />
-          </span>
-          <div className="leading-tight">
-            <p className="text-sm font-black tracking-tight text-ink">SparkNote</p>
-            <p className="text-[11px] font-semibold text-ink-3">拾光碎片笔记</p>
+        {onReturnLanding ? (
+          <button
+            type="button"
+            onClick={onReturnLanding}
+            title="返回首页"
+            className="group flex items-center gap-2.5 rounded-xl text-left transition hover:opacity-85"
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent-3 text-white shadow-sm transition-transform group-hover:scale-105">
+              <Sparkles className="h-4 w-4" aria-hidden="true" />
+            </span>
+            <div className="leading-tight">
+              <p className="text-sm font-black tracking-tight text-ink">SparkNote</p>
+              <p className="text-[11px] font-semibold text-ink-3">返回首页</p>
+            </div>
+          </button>
+        ) : (
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent-3 text-white shadow-sm">
+              <Sparkles className="h-4 w-4" aria-hidden="true" />
+            </span>
+            <div className="leading-tight">
+              <p className="text-sm font-black tracking-tight text-ink">SparkNote</p>
+              <p className="text-[11px] font-semibold text-ink-3">拾光碎片笔记</p>
+            </div>
           </div>
-        </div>
+        )}
         <div className="flex items-center gap-1.5">
           <button
             type="button"

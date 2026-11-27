@@ -3,15 +3,36 @@ import { useEffect, useState } from "react";
 
 const STORAGE_KEY = "fb-theme";
 
+function readTheme(): "dark" | "light" {
+  return document.documentElement.dataset.theme === "dark" ||
+    localStorage.getItem(STORAGE_KEY) === "dark"
+    ? "dark"
+    : "light";
+}
+
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<"dark" | "light">(
-    () => (localStorage.getItem(STORAGE_KEY) === "dark" ? "dark" : "light"),
-  );
+  const [theme, setTheme] = useState<"dark" | "light">(readTheme);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    localStorage.setItem(STORAGE_KEY, theme);
+    try {
+      localStorage.setItem(STORAGE_KEY, theme);
+    } catch {
+      // 隐私模式或存储受限时静默忽略
+    }
   }, [theme]);
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      const next = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+      setTheme((prev) => (prev === next ? prev : next));
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <button

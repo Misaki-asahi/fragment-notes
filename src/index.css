@@ -114,6 +114,9 @@
     background-color: var(--site-bg, var(--void));
     color: var(--site-fg, var(--ink));
     font-family: var(--site-font, var(--font-sans));
+    transition:
+      background-color 0.65s cubic-bezier(0.4, 0, 0.2, 1),
+      color 0.55s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   ::selection {
@@ -313,6 +316,31 @@
   }
   .streak-pop {
     animation: streak-pop 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .landing-fade-in {
+    animation: landing-fade-in 0.72s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .theme-smooth {
+    transition:
+      background-color 0.65s cubic-bezier(0.4, 0, 0.2, 1),
+      color 0.55s cubic-bezier(0.4, 0, 0.2, 1),
+      border-color 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .wing-orbit-slow {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: wing-orbit-spin 48s linear infinite;
+  }
+  .wing-core-pulse {
+    animation: wing-core-breathe 5.2s ease-in-out infinite;
+  }
+  .wing-flutter-left {
+    transform-origin: 480px 192px;
+    animation: wing-flutter-left 6.5s ease-in-out infinite;
+  }
+  .wing-flutter-right {
+    transform-origin: 480px 192px;
+    animation: wing-flutter-right 6.5s ease-in-out infinite;
   }
 
   /* 物理堆叠 3D 记忆闪卡 */
@@ -560,6 +588,48 @@
   }
   100% {
     transform: scale(1);
+  }
+}
+@keyframes landing-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes wing-orbit-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes wing-core-breathe {
+  0%,
+  100% {
+    opacity: 0.88;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes wing-flutter-left {
+  0%,
+  100% {
+    transform: perspective(900px) rotateY(0deg) rotate(0deg);
+  }
+  50% {
+    transform: perspective(900px) rotateY(8deg) rotate(-1.1deg);
+  }
+}
+@keyframes wing-flutter-right {
+  0%,
+  100% {
+    transform: perspective(900px) rotateY(0deg) rotate(0deg);
+  }
+  50% {
+    transform: perspective(900px) rotateY(-8deg) rotate(1.1deg);
   }
 }
 @keyframes typing {
