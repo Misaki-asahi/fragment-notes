@@ -232,23 +232,23 @@ export function SparkQuizView({
             <p className="font-mono text-2xl font-black text-accent tabular-nums">
               {masteredIds.size}
             </p>
-            <p className="mt-1 text-xs font-semibold text-ink-3">已掌握卡片</p>
+            <p className="mt-1 text-xs font-semibold text-ink-2">已掌握卡片</p>
           </div>
           <div className="rounded-xl border border-edge bg-surface-2/60 p-4 text-center">
             <p className="font-mono text-2xl font-black text-ink tabular-nums">{accuracy}%</p>
-            <p className="mt-1 text-xs font-semibold text-ink-3">首轮一次记住</p>
+            <p className="mt-1 text-xs font-semibold text-ink-2">首轮一次记住</p>
           </div>
           <div className="rounded-xl border border-edge bg-surface-2/60 p-4 text-center">
             <p className="font-mono text-2xl font-black text-gold tabular-nums">
               {maxStreak} 🔥
             </p>
-            <p className="mt-1 text-xs font-semibold text-ink-3">最高连胜</p>
+            <p className="mt-1 text-xs font-semibold text-ink-2">最高连胜</p>
           </div>
           <div className="rounded-xl border border-edge bg-surface-2/60 p-4 text-center">
             <p className="font-mono text-2xl font-black text-ink tabular-nums">
               {mm}:{ss}
             </p>
-            <p className="mt-1 text-xs font-semibold text-ink-3">专注用时</p>
+            <p className="mt-1 text-xs font-semibold text-ink-2">专注用时</p>
           </div>
         </div>
 
@@ -415,7 +415,7 @@ export function SparkQuizView({
                           ↻ 第 {card.retryCount} 次重测
                         </span>
                       )}
-                      <span className="rounded-md bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-ink-3">
+                      <span className="rounded-md bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-ink-2">
                         {card.cluster}
                       </span>
                     </div>
@@ -506,7 +506,7 @@ export function SparkQuizView({
                   ↻ 第 {card.retryCount} 次重测
                 </span>
               )}
-              <span className="rounded-md bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-ink-3">
+              <span className="rounded-md bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-ink-2">
                 {card.cluster}
               </span>
             </div>

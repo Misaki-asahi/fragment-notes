@@ -203,7 +203,7 @@ export function SparkSidebar({
                 <Icon className="h-4 w-4 shrink-0" />
                 {label}
               </span>
-              <span className="font-mono text-[10px] text-ink-3">{sub}</span>
+              <span className="font-mono text-[10px] text-ink-2">{sub}</span>
             </button>
           );
         })}
@@ -287,7 +287,7 @@ export function SparkSidebar({
                       <Hash className="h-3 w-3 shrink-0 text-ink-3" />
                       <span className="truncate">{node.tag}</span>
                     </span>
-                    <span className="ml-2 shrink-0 font-mono text-[11px] text-ink-3 tabular-nums">
+                    <span className="ml-2 shrink-0 font-mono text-[11px] text-ink-2 tabular-nums">
                       {node.count}
                     </span>
                   </button>
