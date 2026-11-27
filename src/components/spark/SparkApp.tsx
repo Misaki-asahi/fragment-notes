@@ -26,7 +26,11 @@ import {
   type SparkQuizCard,
 } from "./sparkData";
 
-export function SparkApp() {
+interface SparkAppProps {
+  onReturnLanding?: () => void;
+}
+
+export function SparkApp({ onReturnLanding }: SparkAppProps) {
   const [notes, setNotes] = useState<SparkNote[]>(loadSparkNotes);
   const [view, setView] = useState<SparkView>("stream");
   const [draft, setDraft] = useState("");
@@ -201,6 +205,12 @@ export function SparkApp() {
     },
     quizCount: notes.length,
     pomodoro,
+    onReturnLanding: onReturnLanding
+      ? () => {
+          setMobileNavOpen(false);
+          onReturnLanding();
+        }
+      : undefined,
   };
 
   return (
@@ -222,12 +232,26 @@ export function SparkApp() {
           )}
         </button>
 
-        <div className="flex items-center gap-2">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-3 text-white">
-            <Sparkles className="h-3.5 w-3.5" />
-          </span>
-          <span className="text-sm font-black tracking-tight text-ink">SparkNote 拾光笔记</span>
-        </div>
+        {onReturnLanding ? (
+          <button
+            type="button"
+            onClick={onReturnLanding}
+            title="返回首页"
+            className="flex items-center gap-2 rounded-lg px-1 py-0.5 transition hover:opacity-85"
+          >
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-3 text-white">
+              <Sparkles className="h-3.5 w-3.5" />
+            </span>
+            <span className="text-sm font-black tracking-tight text-ink">SparkNote 拾光笔记</span>
+          </button>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-3 text-white">
+              <Sparkles className="h-3.5 w-3.5" />
+            </span>
+            <span className="text-sm font-black tracking-tight text-ink">SparkNote 拾光笔记</span>
+          </div>
+        )}
 
         <div className="flex items-center gap-1.5">
           <button
