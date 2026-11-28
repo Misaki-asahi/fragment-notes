@@ -4,6 +4,18 @@
 @import "@fontsource/lato/700.css";
 @import "@fontsource/lato/900.css";
 
+@property --btn-from {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #059669;
+}
+
+@property --btn-to {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #047857;
+}
+
 /* 语义令牌：极简模块化卡片美学（默认暖白纸感浅色 + 一键切换深邃紫韵暗色），
    所有配色、渐变、热力图阶梯与光影由 CSS 变量驱动，组件严禁硬编码颜色。 */
 :root,
@@ -40,7 +52,9 @@
   --card-shadow-hover: 0 10px 24px -8px rgba(24, 24, 27, 0.09), 0 1px 3px rgba(24, 24, 27, 0.04);
   --flashcard-front: linear-gradient(160deg, #ffffff 0%, #f4fbf7 100%);
   --flashcard-back: linear-gradient(160deg, #ffffff 0%, #f5f6ff 100%);
-  --btn-bg: linear-gradient(135deg, #059669 0%, #047857 100%);
+  --btn-from: #059669;
+  --btn-to: #047857;
+  --btn-bg: linear-gradient(135deg, var(--btn-from) 0%, var(--btn-to) 100%);
   --btn-shadow: 0 2px 10px -2px rgba(5, 150, 105, 0.35);
   --btn-shadow-hover: 0 6px 16px -3px rgba(4, 120, 87, 0.42);
 }
@@ -78,7 +92,9 @@
   --card-shadow-hover: 0 12px 28px -6px rgba(5, 2, 16, 0.72), 0 0 0 1px rgba(167, 139, 250, 0.25);
   --flashcard-front: radial-gradient(120% 90% at 15% 0%, rgba(155, 119, 255, 0.2) 0%, transparent 56%), linear-gradient(160deg, #21124a 0%, #140a2e 100%);
   --flashcard-back: radial-gradient(110% 85% at 85% 0%, rgba(192, 132, 252, 0.16) 0%, transparent 52%), linear-gradient(165deg, #1b0f3e 0%, #12082a 100%);
-  --btn-bg: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+  --btn-from: #7c3aed;
+  --btn-to: #5b21b6;
+  --btn-bg: linear-gradient(135deg, var(--btn-from) 0%, var(--btn-to) 100%);
   --btn-shadow: 0 4px 16px -3px rgba(126, 79, 255, 0.45);
   --btn-shadow-hover: 0 8px 22px -3px rgba(126, 79, 255, 0.58);
 }
@@ -341,6 +357,27 @@
   .wing-flutter-right {
     transform-origin: 480px 192px;
     animation: wing-flutter-right 6.5s ease-in-out infinite;
+  }
+  .mascot-gentle-bob {
+    animation: mascot-gentle-bob 4.2s ease-in-out infinite;
+  }
+  .scenery-cloud-drift {
+    animation: scenery-cloud-drift 18s ease-in-out infinite;
+  }
+  .scenery-petal-fall {
+    animation: scenery-petal-fall 9s ease-in-out infinite;
+  }
+  .scenery-firefly-rise {
+    animation: scenery-firefly-rise 6.4s ease-in-out infinite;
+  }
+  .scenery-star-twinkle {
+    animation: scenery-star-twinkle 3.2s ease-in-out infinite;
+  }
+  .scenery-meteor-glide {
+    animation: scenery-meteor-glide 7.5s ease-in-out infinite;
+  }
+  .tour-ring-pulse {
+    animation: tour-ring-pulse 2.4s ease-in-out infinite;
   }
 
   /* 物理堆叠 3D 记忆闪卡 */
@@ -641,6 +678,109 @@
   50% {
     border-color: transparent;
   }
+}
+@keyframes mascot-gentle-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+@keyframes scenery-cloud-drift {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(18px);
+  }
+}
+@keyframes scenery-petal-fall {
+  0% {
+    opacity: 0;
+    transform: translate(0, -14px) rotate(0deg);
+  }
+  18% {
+    opacity: 0.9;
+  }
+  82% {
+    opacity: 0.78;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(32px, 56px) rotate(135deg);
+  }
+}
+@keyframes scenery-firefly-rise {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: translateY(8px) scale(0.85);
+  }
+  50% {
+    opacity: 0.95;
+    transform: translateY(-16px) scale(1.18);
+  }
+}
+@keyframes scenery-star-twinkle {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+@keyframes scenery-meteor-glide {
+  0%,
+  72% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  80% {
+    opacity: 0.85;
+  }
+  94%,
+  100% {
+    opacity: 0;
+    transform: translate(-110px, 46px);
+  }
+}
+@keyframes tour-ring-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--accent-2) 65%, transparent),
+      0 0 24px 2px color-mix(in srgb, var(--accent-2) 32%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 4px color-mix(in srgb, var(--accent-2) 88%, transparent),
+      0 0 34px 6px color-mix(in srgb, var(--accent-2) 44%, transparent);
+  }
+}
+
+/* 主题切换期间全局平滑过渡（排除无需过渡的元素与动画节点） */
+html[data-theme-switching="true"],
+html[data-theme-switching="true"] *:not([data-no-theme-transition]):not([data-no-theme-transition] *),
+html[data-theme-switching="true"] *::before,
+html[data-theme-switching="true"] *::after {
+  transition-property:
+    background-color,
+    color,
+    border-color,
+    outline-color,
+    fill,
+    stroke,
+    box-shadow,
+    --btn-from,
+    --btn-to !important;
+  transition-duration: 0.65s !important;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

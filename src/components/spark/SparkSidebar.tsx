@@ -4,6 +4,7 @@ import {
   ChevronDown,
   ChevronRight,
   ChevronUp,
+  Compass,
   Flame,
   GripVertical,
   Hash,
@@ -11,7 +12,6 @@ import {
   LayoutGrid,
   Layers,
   ListFilter,
-  Sparkles,
   Star,
 } from "lucide-react";
 import { ThemeToggle } from "../ThemeToggle";
@@ -35,6 +35,7 @@ interface SparkSidebarProps {
   onToggleStarred: () => void;
   hasByok: boolean;
   onOpenSettings: () => void;
+  onStartTour?: () => void;
   quizCount: number;
   pomodoro: PomodoroController;
   onReturnLanding?: () => void;
@@ -57,6 +58,7 @@ export function SparkSidebar({
   onToggleStarred,
   hasByok,
   onOpenSettings,
+  onStartTour,
   quizCount,
   pomodoro,
   onReturnLanding,
@@ -278,9 +280,12 @@ export function SparkSidebar({
             title="返回首页"
             className="group flex items-center gap-2.5 rounded-xl text-left transition hover:opacity-85"
           >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent-3 text-white shadow-sm transition-transform group-hover:scale-105">
-              <Sparkles className="h-4 w-4" aria-hidden="true" />
-            </span>
+            <img
+              src="./app-icon.jpg"
+              alt=""
+              draggable={false}
+              className="h-8 w-8 shrink-0 rounded-xl border border-edge/80 object-cover shadow-sm transition-transform group-hover:scale-105"
+            />
             <div className="leading-tight">
               <p className="text-sm font-black tracking-tight text-ink">SparkNote</p>
               <p className="text-[11px] font-semibold text-ink-3">返回首页</p>
@@ -288,22 +293,36 @@ export function SparkSidebar({
           </button>
         ) : (
           <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent-3 text-white shadow-sm">
-              <Sparkles className="h-4 w-4" aria-hidden="true" />
-            </span>
+            <img
+              src="./app-icon.jpg"
+              alt=""
+              draggable={false}
+              className="h-8 w-8 shrink-0 rounded-xl border border-edge/80 object-cover shadow-sm"
+            />
             <div className="leading-tight">
               <p className="text-sm font-black tracking-tight text-ink">SparkNote</p>
               <p className="text-[11px] font-semibold text-ink-3">拾光碎片笔记</p>
             </div>
           </div>
         )}
-        <div className="flex items-center gap-1.5">
+        <div data-tour="topbar-tools" className="flex items-center gap-1">
+          {onStartTour && (
+            <button
+              type="button"
+              onClick={onStartTour}
+              aria-label="新手引导"
+              title="重新观看新手引导"
+              className="flex h-8 w-8 items-center justify-center rounded-sm border border-edge bg-surface text-ink-2 transition hover:border-edge-2 hover:text-accent"
+            >
+              <Compass className="h-4 w-4" />
+            </button>
+          )}
           <button
             type="button"
             onClick={onOpenSettings}
             aria-label="API 设置"
             title="API 设置（BYOK）"
-            className="relative flex h-9 w-9 items-center justify-center rounded-sm border border-edge bg-surface text-ink-2 transition hover:border-edge-2 hover:text-accent"
+            className="relative flex h-8 w-8 items-center justify-center rounded-sm border border-edge bg-surface text-ink-2 transition hover:border-edge-2 hover:text-accent"
           >
             <KeyRound className="h-4 w-4" />
             {hasByok && (
@@ -317,84 +336,88 @@ export function SparkSidebar({
         </div>
       </div>
 
-      {/* flomo 风格 12 周微型活跃热力图 */}
-      <div className="shrink-0 rounded-xl border border-edge bg-surface p-4 shadow-xs">
-        <div className="mb-3 flex items-center justify-between text-[11px] font-bold text-ink-3">
-          <span>近 12 周记录热力</span>
-          <span className="font-mono text-accent">{activeDays} 天活跃</span>
+      {/* flomo 风格 12 周微型活跃热力图 + 专注番茄钟 */}
+      <div data-tour="heatmap-pomodoro" className="shrink-0 space-y-5">
+        <div className="rounded-xl border border-edge bg-surface p-4 shadow-xs">
+          <div className="mb-3 flex items-center justify-between text-[11px] font-bold text-ink-3">
+            <span>近 12 周记录热力</span>
+            <span className="font-mono text-accent">{activeDays} 天活跃</span>
+          </div>
+          <div
+            className="grid grid-flow-col grid-rows-7 gap-[3.5px]"
+            role="img"
+            aria-label={`近 12 周学习记录热力图，共有 ${activeDays} 天活跃记录`}
+          >
+            {heatmap.map((cell) => (
+              <span
+                key={cell.dateKey}
+                title={`${cell.label}：${cell.count} 条记录`}
+                className="aspect-square w-full rounded-[2px] transition-transform hover:scale-125"
+                style={{ backgroundColor: `var(--heat-${cell.level})` }}
+              />
+            ))}
+          </div>
+          <p className="mt-3 text-[11px] font-medium text-ink-3 tabular-nums">
+            {noteCount} 条碎片 · {totalTagCount} 个标签 · {activeDays} 天活跃
+          </p>
         </div>
-        <div
-          className="grid grid-flow-col grid-rows-7 gap-[3.5px]"
-          role="img"
-          aria-label={`近 12 周学习记录热力图，共有 ${activeDays} 天活跃记录`}
-        >
-          {heatmap.map((cell) => (
-            <span
-              key={cell.dateKey}
-              title={`${cell.label}：${cell.count} 条记录`}
-              className="aspect-square w-full rounded-[2px] transition-transform hover:scale-125"
-              style={{ backgroundColor: `var(--heat-${cell.level})` }}
-            />
-          ))}
-        </div>
-        <p className="mt-3 text-[11px] font-medium text-ink-3 tabular-nums">
-          {noteCount} 条碎片 · {totalTagCount} 个标签 · {activeDays} 天活跃
-        </p>
+
+        {/* 专注番茄钟 */}
+        <SparkPomodoro pomodoro={pomodoro} />
       </div>
 
-      {/* 快捷入口：开始 3 分钟自测 */}
-      <button
-        type="button"
-        onClick={onStartQuiz}
-        className="btn-primary w-full shrink-0 justify-between !px-4 !py-2.5 text-xs"
-      >
-        <span className="inline-flex items-center gap-2">
-          <Flame className="h-4 w-4" aria-hidden="true" />
-          开始 3 分钟自测
-        </span>
-        <span className="rounded-full bg-black/15 px-2 py-0.5 font-mono text-[11px] tabular-nums">
-          {quizCount} 题
-        </span>
-      </button>
+      {/* 快捷入口 + 视图切换器 */}
+      <div data-tour="views-quiz" className="shrink-0 space-y-4">
+        <button
+          type="button"
+          onClick={onStartQuiz}
+          className="btn-primary w-full justify-between !px-4 !py-2.5 text-xs"
+        >
+          <span className="inline-flex items-center gap-2">
+            <Flame className="h-4 w-4" aria-hidden="true" />
+            开始 3 分钟自测
+          </span>
+          <span className="rounded-full bg-black/15 px-2 py-0.5 font-mono text-[11px] tabular-nums">
+            {quizCount} 题
+          </span>
+        </button>
 
-      {/* 专注番茄钟 */}
-      <SparkPomodoro pomodoro={pomodoro} />
-
-      {/* 视图切换器 */}
-      <nav aria-label="主视图切换" className="shrink-0 space-y-1.5">
-        <p className="px-2.5 pb-1 text-[11px] font-bold tracking-wider text-ink-3">工作视图</p>
-        {(
-          [
-            { key: "stream", label: "碎片工作区", sub: "Stream", icon: ListFilter },
-            { key: "clusters", label: "专题板块", sub: "Clusters", icon: LayoutGrid },
-            { key: "quiz", label: "卡片自测", sub: "Quiz", icon: Layers },
-          ] as const
-        ).map(({ key, label, sub, icon: Icon }) => {
-          const active = view === key;
-          return (
-            <button
-              key={key}
-              type="button"
-              aria-pressed={active}
-              onClick={() => onChangeView(key)}
-              className={`flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-left text-xs transition-all ${
-                active
-                  ? "border tint-accent font-bold text-accent shadow-xs"
-                  : "border border-transparent font-semibold text-ink-2 hover:bg-surface hover:text-ink"
-              }`}
-            >
-              <span className="inline-flex items-center gap-2.5">
-                <Icon className="h-4 w-4 shrink-0" />
-                {label}
-              </span>
-              <span className="font-mono text-[10px] text-ink-2">{sub}</span>
-            </button>
-          );
-        })}
-      </nav>
+        {/* 视图切换器 */}
+        <nav aria-label="主视图切换" className="space-y-1.5">
+          <p className="px-2.5 pb-1 text-[11px] font-bold tracking-wider text-ink-3">工作视图</p>
+          {(
+            [
+              { key: "stream", label: "碎片工作区", sub: "Stream", icon: ListFilter },
+              { key: "clusters", label: "专题板块", sub: "Clusters", icon: LayoutGrid },
+              { key: "quiz", label: "卡片自测", sub: "Quiz", icon: Layers },
+            ] as const
+          ).map(({ key, label, sub, icon: Icon }) => {
+            const active = view === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                aria-pressed={active}
+                onClick={() => onChangeView(key)}
+                className={`flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-left text-xs transition-all ${
+                  active
+                    ? "border tint-accent font-bold text-accent shadow-xs"
+                    : "border border-transparent font-semibold text-ink-2 hover:bg-surface hover:text-ink"
+                }`}
+              >
+                <span className="inline-flex items-center gap-2.5">
+                  <Icon className="h-4 w-4 shrink-0" />
+                  {label}
+                </span>
+                <span className="font-mono text-[10px] text-ink-2">{sub}</span>
+              </button>
+            );
+          })}
+        </nav>
+      </div>
 
       {/* AI 自动标签树 */}
-      <div className="shrink-0 space-y-1 pb-2">
+      <div data-tour="tag-tree" className="shrink-0 space-y-1 pb-2">
         <p className="px-2.5 pb-1 text-[11px] font-bold tracking-wider text-ink-3">AI 自动标签树</p>
         <button
           type="button"

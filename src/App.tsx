@@ -21,13 +21,15 @@ const EXIT_MS = 220;
 function App() {
   const [showWorkspace, setShowWorkspace] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [startTourOnEnter, setStartTourOnEnter] = useState(false);
 
   useEffect(() => {
     warmCjkFontSubsets(WORKSPACE_TEXT);
   }, []);
 
-  function enter() {
+  function enter(withTour = false) {
     if (leaving) return;
+    setStartTourOnEnter(withTour);
     setLeaving(true);
     warmCjkFontSubsets(WORKSPACE_TEXT);
     window.setTimeout(() => setShowWorkspace(true), EXIT_MS);
@@ -36,13 +38,26 @@ function App() {
   function backToLanding() {
     setShowWorkspace(false);
     setLeaving(false);
+    setStartTourOnEnter(false);
   }
 
   if (showWorkspace) {
-    return <SparkApp onReturnLanding={backToLanding} />;
+    return (
+      <SparkApp
+        onReturnLanding={backToLanding}
+        autoStartTour={startTourOnEnter}
+        onTourFinished={() => setStartTourOnEnter(false)}
+      />
+    );
   }
 
-  return <SparkLandingPage onEnter={enter} exiting={leaving} />;
+  return (
+    <SparkLandingPage
+      onEnter={() => enter(false)}
+      onStartTour={() => enter(true)}
+      exiting={leaving}
+    />
+  );
 }
 
 export default App;

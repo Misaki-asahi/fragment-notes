@@ -1,5 +1,5 @@
 import { startTransition, useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Flame, GitBranch, Menu, Sparkles, Trash2, X } from "lucide-react";
+import { AlertTriangle, Flame, GitBranch, Menu, Trash2, X } from "lucide-react";
 import { generateDeck } from "../../api/generateDeck";
 import { askFollowup, type FollowupHistoryItem } from "../../api/followup";
 import { getByok } from "../../utils/byok";
@@ -12,6 +12,7 @@ import { SparkQuizView } from "./SparkQuizView";
 import { usePomodoro } from "./usePomodoro";
 import { SparkRelatedPanel } from "./SparkRelatedPanel";
 import { SparkSidebar, type SparkView } from "./SparkSidebar";
+import { SparkSpotlightTour } from "./SparkSpotlightTour";
 import {
   buildHeatmapData,
   buildQuizQueue,
@@ -38,6 +39,8 @@ import {
 
 interface SparkAppProps {
   onReturnLanding?: () => void;
+  autoStartTour?: boolean;
+  onTourFinished?: () => void;
 }
 
 interface TagMenuState {
@@ -47,7 +50,11 @@ interface TagMenuState {
   y: number;
 }
 
-export function SparkApp({ onReturnLanding }: SparkAppProps) {
+export function SparkApp({
+  onReturnLanding,
+  autoStartTour = false,
+  onTourFinished,
+}: SparkAppProps) {
   const [notes, setNotes] = useState<SparkNote[]>(loadSparkNotes);
   const [view, setView] = useState<SparkView>("stream");
   const [draft, setDraft] = useState("");
@@ -73,10 +80,24 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
   const [storageWarning, setStorageWarning] = useState<string | null>(null);
   const [tagMenu, setTagMenu] = useState<TagMenuState | null>(null);
   const [tagParents, setTagParents] = useState<TagParentMap>(loadTagParents);
+  const [tourOpen, setTourOpen] = useState(false);
+  const [tourRunKey, setTourRunKey] = useState(0);
   const pomodoro = usePomodoro();
 
   const notesRef = useRef(notes);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  useEffect(() => {
+    if (!autoStartTour) return;
+    const timer = window.setTimeout(() => {
+      setView("stream");
+      setSelectedTag(null);
+      setOnlyStarred(false);
+      setTourRunKey((k) => k + 1);
+      setTourOpen(true);
+    }, 320);
+    return () => window.clearTimeout(timer);
+  }, [autoStartTour]);
 
   useEffect(() => {
     const timers = timersRef.current;
@@ -469,6 +490,14 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
       setAiSettingsOpen(true);
       setMobileNavOpen(false);
     },
+    onStartTour: () => {
+      setMobileNavOpen(false);
+      setView("stream");
+      setSelectedTag(null);
+      setOnlyStarred(false);
+      setTourRunKey((k) => k + 1);
+      setTourOpen(true);
+    },
     quizCount: notes.length,
     pomodoro,
     onReturnLanding: onReturnLanding
@@ -488,6 +517,7 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
       <header className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-edge bg-surface/90 px-4 py-3 backdrop-blur-md lg:hidden">
         <button
           type="button"
+          data-tour="mobile-nav-trigger"
           aria-label="打开导航与标签栏"
           onClick={() => setMobileNavOpen(true)}
           className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-edge bg-surface text-ink-2"
@@ -508,16 +538,22 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
             title="返回首页"
             className="flex items-center gap-2 rounded-lg px-1 py-0.5 transition hover:opacity-85"
           >
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-3 text-white">
-              <Sparkles className="h-3.5 w-3.5" />
-            </span>
+            <img
+              src="./app-icon.jpg"
+              alt=""
+              draggable={false}
+              className="h-7 w-7 shrink-0 rounded-lg border border-edge/80 object-cover shadow-xs"
+            />
             <span className="text-sm font-black tracking-tight text-ink">SparkNote 拾光笔记</span>
           </button>
         ) : (
           <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-3 text-white">
-              <Sparkles className="h-3.5 w-3.5" />
-            </span>
+            <img
+              src="./app-icon.jpg"
+              alt=""
+              draggable={false}
+              className="h-7 w-7 shrink-0 rounded-lg border border-edge/80 object-cover shadow-xs"
+            />
             <span className="text-sm font-black tracking-tight text-ink">SparkNote 拾光笔记</span>
           </div>
         )}
@@ -525,6 +561,7 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
         <div className="flex items-center gap-1.5">
           <button
             type="button"
+            data-tour="mobile-quiz-trigger"
             onClick={startQuizAll}
             className="inline-flex items-center gap-1 rounded-lg border tint-accent px-2.5 py-1.5 text-xs font-bold text-accent"
           >
@@ -533,6 +570,7 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
           </button>
           <button
             type="button"
+            data-tour="related-trigger"
             aria-label="打开 AI 隐形关联面板"
             onClick={() => setMobileRelatedOpen(true)}
             className="flex h-9 w-9 items-center justify-center rounded-lg border tint-ai"
@@ -597,15 +635,17 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
                   </button>
                 </div>
 
-                <SparkComposer
-                  value={draft}
-                  onChange={setDraft}
-                  onPublish={publishNote}
-                  onUploadFile={handleUploadFile}
-                  uploading={uploading}
-                  uploadNotice={uploadNotice}
-                  uploadError={uploadError}
-                />
+                <div data-tour="composer">
+                  <SparkComposer
+                    value={draft}
+                    onChange={setDraft}
+                    onPublish={publishNote}
+                    onUploadFile={handleUploadFile}
+                    uploading={uploading}
+                    uploadNotice={uploadNotice}
+                    uploadError={uploadError}
+                  />
+                </div>
 
                 {/* 筛选状态提示条 */}
                 {(selectedTag || onlyStarred) && (
@@ -650,33 +690,34 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
                       </div>
                     ) : null
                   ) : (
-                    filteredNotes.map((note) => (
-                      <SparkNoteCard
-                        key={note.id}
-                        note={note}
-                        selected={note.id === activeNote?.id}
-                        followupOpen={openFollowupNoteId === note.id}
-                        onFollowupOpenChange={(open) => {
-                          setOpenFollowupNoteId(open ? note.id : null);
-                          if (open) setSelectedNoteId(note.id);
-                        }}
-                        onSelect={selectNote}
-                        onToggleStar={(id) =>
-                          commitNotes((prev) =>
-                            prev.map((item) =>
-                              item.id === id ? { ...item, starred: !item.starred } : item,
-                            ),
-                          )
-                        }
-                        onClickTag={(tag) => setSelectedTag((cur) => (cur === tag ? null : tag))}
-                        onMakeFlashcard={startQuizSingleNote}
-                        onDelete={deleteNote}
-                        onAddTag={addTag}
-                        onTagContextMenu={openTagMenu}
-                        onUpdateCloze={updateCloze}
-                        onAskFollowup={submitFollowup}
-                        onDeleteFollowup={deleteFollowup}
-                      />
+                    filteredNotes.map((note, idx) => (
+                      <div key={note.id} data-tour={idx === 0 ? "note-card" : undefined}>
+                        <SparkNoteCard
+                          note={note}
+                          selected={note.id === activeNote?.id}
+                          followupOpen={openFollowupNoteId === note.id}
+                          onFollowupOpenChange={(open) => {
+                            setOpenFollowupNoteId(open ? note.id : null);
+                            if (open) setSelectedNoteId(note.id);
+                          }}
+                          onSelect={selectNote}
+                          onToggleStar={(id) =>
+                            commitNotes((prev) =>
+                              prev.map((item) =>
+                                item.id === id ? { ...item, starred: !item.starred } : item,
+                              ),
+                            )
+                          }
+                          onClickTag={(tag) => setSelectedTag((cur) => (cur === tag ? null : tag))}
+                          onMakeFlashcard={startQuizSingleNote}
+                          onDelete={deleteNote}
+                          onAddTag={addTag}
+                          onTagContextMenu={openTagMenu}
+                          onUpdateCloze={updateCloze}
+                          onAskFollowup={submitFollowup}
+                          onDeleteFollowup={deleteFollowup}
+                        />
+                      </div>
                     ))
                   )}
                 </div>
@@ -705,7 +746,10 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
         </main>
 
         {/* 右栏：AI 隐形关联上下文面板（xl 以上常驻 304px） */}
-        <div className="hidden w-[304px] shrink-0 border-l border-edge bg-void xl:block">
+        <div
+          data-tour="related-panel"
+          className="hidden w-[304px] shrink-0 border-l border-edge bg-void xl:block"
+        >
           <div className="sticky top-0 h-screen">
             <SparkRelatedPanel
               queryText={draft}
@@ -818,6 +862,20 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
           }}
         />
       )}
+
+      <SparkSpotlightTour
+        key={tourRunKey}
+        open={tourOpen}
+        onClose={() => {
+          setTourOpen(false);
+          onTourFinished?.();
+        }}
+        onEnsureStreamView={() => {
+          setView("stream");
+          setSelectedTag(null);
+          setOnlyStarred(false);
+        }}
+      />
     </div>
   );
 }

@@ -1,17 +1,5 @@
 import { useEffect, useState } from "react";
-
-function readDocumentTheme(): "dark" | "light" {
-  return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
-}
-
-function applyTheme(next: "dark" | "light") {
-  document.documentElement.dataset.theme = next;
-  try {
-    localStorage.setItem("fb-theme", next);
-  } catch {
-    // 隐私模式或存储受限时静默忽略
-  }
-}
+import { applyAppTheme, readAppTheme, type AppTheme } from "../../utils/theme";
 
 interface WingPaletteRefs {
   shadowFill: string;
@@ -273,11 +261,12 @@ function SeraphHalfWing({ refs }: { refs: WingPaletteRefs }) {
 }
 
 export function SparkDualWings() {
-  const [theme, setTheme] = useState<"dark" | "light">(readDocumentTheme);
+  const [theme, setTheme] = useState<AppTheme>(readAppTheme);
 
   useEffect(() => {
     const observer = new MutationObserver(() => {
-      const next = readDocumentTheme();
+      const next: AppTheme =
+        document.documentElement.dataset.theme === "dark" ? "dark" : "light";
       setTheme((prev) => (prev === next ? prev : next));
     });
     observer.observe(document.documentElement, {
@@ -318,7 +307,7 @@ export function SparkDualWings() {
         {/* 可点击透明热区：左三翼切深紫暗色、右三翼切暖白浅色 */}
         <button
           type="button"
-          onClick={() => applyTheme("dark")}
+          onClick={() => applyAppTheme("dark", { animate: true })}
           aria-pressed={isDark}
           aria-label="点击左侧三翼切换到深紫夜韵主题"
           title="切换到深紫夜韵主题"
@@ -326,7 +315,7 @@ export function SparkDualWings() {
         />
         <button
           type="button"
-          onClick={() => applyTheme("light")}
+          onClick={() => applyAppTheme("light", { animate: true })}
           aria-pressed={!isDark}
           aria-label="点击右侧三翼切换到暖白翡翠主题"
           title="切换到暖白翡翠主题"
@@ -617,6 +606,10 @@ export function SparkDualWings() {
               stroke={isDark ? "#c4b5fd" : "#047857"}
               strokeOpacity="0.62"
               strokeWidth="0.95"
+              style={{
+                transition:
+                  "fill 0.65s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.65s cubic-bezier(0.4, 0, 0.2, 1)",
+              }}
             />
             <circle
               r="3.4"
