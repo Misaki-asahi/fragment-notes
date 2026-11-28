@@ -21,21 +21,18 @@ function loadEnv(): Record<string, string> {
 }
 
 const env = loadEnv();
-const ALLOWED_ORIGINS = new Set([
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-  'http://localhost:5174',
-  'http://127.0.0.1:5174',
-]);
+function isAllowedOrigin(origin: string): boolean {
+  return /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
+}
 
 const server = createServer(async (req, res) => {
   const origin = req.headers.origin ?? '';
-  if (origin && !ALLOWED_ORIGINS.has(origin)) {
+  if (origin && !isAllowedOrigin(origin)) {
     res.writeHead(403);
     res.end();
     return;
   }
-  const cors: Record<string, string> = ALLOWED_ORIGINS.has(origin)
+  const cors: Record<string, string> = isAllowedOrigin(origin)
     ? {
         'Access-Control-Allow-Origin': origin,
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',

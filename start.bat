@@ -20,7 +20,7 @@ if not exist "node_modules\" (
   )
 )
 
-echo [启动] 正在启动前端开发服务器与本地 AI 转发层（:5173 / :8000）...
+echo [启动] 正在启动前端开发服务器与本地 AI 转发层（默认 :5173，冲突自动顺延 / :8000）...
 echo [提示] 按 Ctrl+C 或关闭本窗口即可停止服务。
 node scripts/dev-all.mjs --open
 if errorlevel 1 pause

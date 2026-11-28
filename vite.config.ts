@@ -6,6 +6,10 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   // 相对 base + 关闭 modulepreload：保证 dist/index.html 双击（file://）时零请求报错
   base: "./",
+  server: {
+    host: "127.0.0.1",
+    port: 5173,
+  },
   build: { modulePreload: false },
   plugins: [react(), tailwindcss()],
 })
