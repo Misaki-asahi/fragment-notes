@@ -1,6 +1,6 @@
 // B5 转发层离线容错测试：stub fetch 模拟上游各种响应，验证校验/清洗/兜底/重试。
-// 运行：node "C:/Users/20824/Desktop/AI临时文件/qoder临时文件汇总/笔记/test-handler.mjs"
-import { handleRequest } from 'file:///C:/Users/20824/Desktop/AI临时文件/qoder临时文件汇总/笔记2.0/fragment-notes-regression/api/generate-deck.ts';
+// 运行：node handover/2026-11-22/离线测试脚本/test-handler.mjs
+import { handleRequest } from '../../../api/generate-deck.ts';
 
 const env = { AI_API_KEY: 'test-key-not-real' };
 const realFetch = globalThis.fetch;

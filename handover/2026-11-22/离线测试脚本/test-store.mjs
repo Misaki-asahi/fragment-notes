@@ -24,7 +24,7 @@ globalThis.localStorage = {
   removeItem: (k) => mem.delete(k),
 };
 
-const STORE_URL = 'file:///C:/Users/20824/Desktop/AI临时文件/qoder临时文件汇总/笔记2.0/fragment-notes-regression/src/store/useDeckStore.ts';
+const STORE_URL = new URL('../../../src/store/useDeckStore.ts', import.meta.url).href;
 let pass = 0, fail = 0;
 function check(name, ok) {
   console.log(`  ${ok ? 'PASS' : 'FAIL'} ${name}`);
