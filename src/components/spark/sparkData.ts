@@ -1,5 +1,14 @@
 import type { StudyDeck } from "../../types/deck";
 
+export interface SparkFollowup {
+  id: string;
+  question: string;
+  answer: string;
+  createdAt: number;
+  updatedAt?: number;
+  model?: string;
+}
+
 export interface SparkNote {
   id: string;
   content: string;
@@ -13,6 +22,7 @@ export interface SparkNote {
   createdAt: number;
   aiProcessing?: boolean;
   confusion?: StudyDeck["confusions"][number];
+  followups?: SparkFollowup[];
 }
 
 export interface SparkQuizCard {
@@ -281,8 +291,12 @@ const CLUSTER_RULES: { keywords: string[]; cluster: string; defaultTag: string }
 export interface TagTreeNode {
   tag: string;
   count: number;
-  children: { tag: string; count: number }[];
+  children: TagTreeNode[];
 }
+
+export type TagParentMap = Record<string, string | null>;
+
+const TAG_PARENTS_KEY = "sparknote:tag-parents:v1";
 
 const PARENT_CHILD_TAGS: Record<string, string[]> = {
   高数: ["极限", "微积分", "导数"],
@@ -291,6 +305,60 @@ const PARENT_CHILD_TAGS: Record<string, string[]> = {
   有机化学: ["反应机理"],
   英语语法: ["时态辨析", "定语从句", "虚拟语气"],
 };
+
+function buildParentByChild(customParents: TagParentMap): Record<string, string> {
+  const parentByChild: Record<string, string> = {};
+  for (const [parent, children] of Object.entries(PARENT_CHILD_TAGS)) {
+    for (const child of children) parentByChild[child] = parent;
+  }
+  for (const [child, parent] of Object.entries(customParents)) {
+    if (!child || parent === child) continue;
+    if (parent === null) delete parentByChild[child];
+    else if (parent) parentByChild[child] = parent;
+  }
+  return parentByChild;
+}
+
+export function loadTagParents(): TagParentMap {
+  try {
+    const raw = localStorage.getItem(TAG_PARENTS_KEY);
+    if (!raw) return {};
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return {};
+    const result: TagParentMap = {};
+    for (const [child, parent] of Object.entries(parsed)) {
+      if ((typeof parent === "string" || parent === null) && child && parent !== child) {
+        result[child] = parent;
+      }
+    }
+    return result;
+  } catch {
+    return {};
+  }
+}
+
+export function saveTagParents(parents: TagParentMap): boolean {
+  try {
+    localStorage.setItem(TAG_PARENTS_KEY, JSON.stringify(parents));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function canMergeTag(source: string, target: string, customParents: TagParentMap): boolean {
+  if (!source || !target || source === target) return false;
+  const parentByChild = buildParentByChild(customParents);
+  if (parentByChild[source] === target) return false;
+  const seen = new Set<string>();
+  let current: string | undefined = target;
+  while (current) {
+    if (current === source || seen.has(current)) return false;
+    seen.add(current);
+    current = parentByChild[current];
+  }
+  return true;
+}
 
 function sanitizeNoteText(text: string): string {
   return text
@@ -338,6 +406,22 @@ function sanitizeNote(note: SparkNote): SparkNote {
       `用自己的话把原句逻辑复述一遍：${aiTitle}。`,
     );
   }
+  const followupSource: unknown[] = Array.isArray(note.followups) ? note.followups : [];
+  const followups = followupSource.flatMap((item): SparkFollowup[] => {
+    if (typeof item !== "object" || item === null) return [];
+    const turn = item as Record<string, unknown>;
+    const question = typeof turn.question === "string" ? turn.question.trim().slice(0, 2000) : "";
+    const answer = typeof turn.answer === "string" ? turn.answer.trim().slice(0, 20_000) : "";
+    if (!question || !answer) return [];
+    return [{
+      id: typeof turn.id === "string" && turn.id ? turn.id : crypto.randomUUID(),
+      question,
+      answer,
+      createdAt: typeof turn.createdAt === "number" ? turn.createdAt : Date.now(),
+      updatedAt: typeof turn.updatedAt === "number" ? turn.updatedAt : undefined,
+      model: typeof turn.model === "string" ? turn.model.slice(0, 100) : undefined,
+    }];
+  }).slice(0, 50);
   return {
     ...note,
     content,
@@ -345,6 +429,7 @@ function sanitizeNote(note: SparkNote): SparkNote {
     question: sanitizeNoteText(note.question),
     plainExplanation,
     clozeTerms: Array.isArray(note.clozeTerms) ? note.clozeTerms.map(sanitizeNoteText) : [],
+    followups: followups.length > 0 ? followups : undefined,
     confusion: note.confusion
       ? {
           topic: sanitizeNoteText(note.confusion.topic),
@@ -358,7 +443,40 @@ function sanitizeNote(note: SparkNote): SparkNote {
   };
 }
 
-export function buildTagTree(notes: SparkNote[]): { tree: TagTreeNode[]; totalTagCount: number } {
+export function findTagNode(tree: TagTreeNode[], tag: string): TagTreeNode | null {
+  for (const node of tree) {
+    if (node.tag === tag) return node;
+    const found = findTagNode(node.children, tag);
+    if (found) return found;
+  }
+  return null;
+}
+
+export function getTagPath(tree: TagTreeNode[], tag: string): string[] | null {
+  for (const node of tree) {
+    if (node.tag === tag) return [node.tag];
+    const childPath = getTagPath(node.children, tag);
+    if (childPath) return [node.tag, ...childPath];
+  }
+  return null;
+}
+
+export function collectTagSubtree(tree: TagTreeNode[], tag: string): string[] {
+  const node = findTagNode(tree, tag);
+  if (!node) return [];
+  const result: string[] = [];
+  const visit = (current: TagTreeNode) => {
+    result.push(current.tag);
+    current.children.forEach(visit);
+  };
+  visit(node);
+  return result;
+}
+
+export function buildTagTree(
+  notes: SparkNote[],
+  customParents: TagParentMap = {},
+): { tree: TagTreeNode[]; totalTagCount: number } {
   const noteIdsByTag = new Map<string, Set<string>>();
   for (const note of notes) {
     for (const tag of note.tags) {
@@ -368,33 +486,51 @@ export function buildTagTree(notes: SparkNote[]): { tree: TagTreeNode[]; totalTa
     }
   }
 
-  const assignedChildren = new Set<string>();
-  const nodes: TagTreeNode[] = [];
-
-  for (const [parent, childDefs] of Object.entries(PARENT_CHILD_TAGS)) {
-    const parentIds = new Set(noteIdsByTag.get(parent) ?? []);
-    const children: { tag: string; count: number }[] = [];
-    for (const child of childDefs) {
-      const childIds = noteIdsByTag.get(child);
-      if (childIds && childIds.size > 0) {
-        assignedChildren.add(child);
-        children.push({ tag: child, count: childIds.size });
-        for (const id of childIds) parentIds.add(id);
-      }
-    }
-    if (parentIds.size > 0) {
-      children.sort((a, b) => b.count - a.count);
-      nodes.push({ tag: parent, count: parentIds.size, children });
-    }
+  const parentByChild = buildParentByChild(customParents);
+  const childrenByParent = new Map<string, string[]>();
+  const allTags = new Set<string>(noteIdsByTag.keys());
+  for (const [child, parent] of Object.entries(parentByChild)) {
+    allTags.add(child);
+    allTags.add(parent);
+    const children = childrenByParent.get(parent) ?? [];
+    if (!children.includes(child)) children.push(child);
+    childrenByParent.set(parent, children);
   }
 
-  for (const [tag, ids] of noteIdsByTag.entries()) {
-    if (Object.hasOwn(PARENT_CHILD_TAGS, tag) || assignedChildren.has(tag)) continue;
-    nodes.push({ tag, count: ids.size, children: [] });
-  }
+  const idCache = new Map<string, Set<string>>();
+  const collectIds = (tag: string, stack: Set<string>): Set<string> => {
+    const cached = idCache.get(tag);
+    if (cached) return cached;
+    if (stack.has(tag)) return new Set();
+    const ids = new Set(noteIdsByTag.get(tag) ?? []);
+    stack.add(tag);
+    for (const child of childrenByParent.get(tag) ?? []) {
+      for (const id of collectIds(child, stack)) ids.add(id);
+    }
+    stack.delete(tag);
+    idCache.set(tag, ids);
+    return ids;
+  };
 
-  nodes.sort((a, b) => b.count - a.count);
-  return { tree: nodes, totalTagCount: noteIdsByTag.size };
+  const buildNode = (tag: string, stack: Set<string>): TagTreeNode | null => {
+    if (stack.has(tag)) return null;
+    const ids = collectIds(tag, new Set());
+    if (ids.size === 0) return null;
+    const nextStack = new Set(stack).add(tag);
+    const children = (childrenByParent.get(tag) ?? [])
+      .map((child) => buildNode(child, nextStack))
+      .filter((child): child is TagTreeNode => Boolean(child))
+      .sort((a, b) => b.count - a.count);
+    return { tag, count: ids.size, children };
+  };
+
+  const roots = Array.from(allTags)
+    .filter((tag) => !parentByChild[tag] || !allTags.has(parentByChild[tag]))
+    .map((tag) => buildNode(tag, new Set()))
+    .filter((node): node is TagTreeNode => Boolean(node))
+    .sort((a, b) => b.count - a.count);
+
+  return { tree: roots, totalTagCount: noteIdsByTag.size };
 }
 
 export function noteMatchesTagFilter(
@@ -403,9 +539,126 @@ export function noteMatchesTagFilter(
   tree: TagTreeNode[],
 ): boolean {
   if (note.tags.includes(selectedTag)) return true;
-  const parentNode = tree.find((n) => n.tag === selectedTag);
-  if (!parentNode || parentNode.children.length === 0) return false;
-  return parentNode.children.some((c) => note.tags.includes(c.tag));
+  return collectTagSubtree(tree, selectedTag).some((tag) => note.tags.includes(tag));
+}
+
+export function inferTagParentsForNotes(
+  notes: SparkNote[],
+  currentParents: TagParentMap,
+): TagParentMap {
+  if (notes.length < 2) return currentParents;
+  const root = notes[0].tags[0];
+  if (!root || notes.some((note) => note.tags[0] !== root)) return currentParents;
+  const next = { ...currentParents };
+  let changed = false;
+  for (const note of notes) {
+    for (const tag of note.tags.slice(1)) {
+      if (!tag || tag === root || next[tag] === root) continue;
+      if (canMergeTag(tag, root, next)) {
+        next[tag] = root;
+        changed = true;
+      }
+    }
+  }
+  return changed ? next : currentParents;
+}
+
+export function resolveTagAddition(
+  currentTags: string[],
+  addedTag: string,
+  tree: TagTreeNode[],
+  currentParents: TagParentMap,
+): { tags: string[]; parents: TagParentMap } {
+  if (currentTags.some((tag) => tag.toLowerCase() === addedTag.toLowerCase())) {
+    return { tags: currentTags, parents: currentParents };
+  }
+  const existingPath = getTagPath(tree, addedTag);
+  if (!existingPath) {
+    const parent = currentTags[currentTags.length - 1];
+    if (parent && canMergeTag(addedTag, parent, currentParents)) {
+      return { tags: [...currentTags, addedTag], parents: { ...currentParents, [addedTag]: parent } };
+    }
+    return { tags: [...currentTags, addedTag], parents: currentParents };
+  }
+
+  let commonLength = 0;
+  while (
+    commonLength < currentTags.length &&
+    commonLength < existingPath.length &&
+    currentTags[commonLength].toLowerCase() === existingPath[commonLength].toLowerCase()
+  ) {
+    commonLength += 1;
+  }
+
+  const merged: string[] = [];
+  const seen = new Set<string>();
+  for (const tag of [
+    ...currentTags.slice(0, commonLength),
+    ...existingPath.slice(commonLength),
+    ...currentTags.slice(commonLength),
+  ]) {
+    const key = tag.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.push(tag);
+    }
+  }
+
+  const nextParents = { ...currentParents };
+  for (let index = 1; index < merged.length; index += 1) {
+    const child = merged[index];
+    const parent = merged[index - 1];
+    if (child === parent || nextParents[child] === parent) continue;
+    if (!canMergeTag(child, parent, nextParents)) {
+      return { tags: [...currentTags, addedTag], parents: currentParents };
+    }
+    nextParents[child] = parent;
+  }
+  return { tags: merged, parents: nextParents };
+}
+
+export function migrateTagSubtree(
+  notes: SparkNote[],
+  source: string,
+  target: string | null,
+  tree: TagTreeNode[],
+  currentParents: TagParentMap,
+): { notes: SparkNote[]; parents: TagParentMap } {
+  const subtree = collectTagSubtree(tree, source);
+  if (subtree.length === 0) return { notes, parents: currentParents };
+  const subtreeSet = new Set(subtree);
+  const targetPath = target ? getTagPath(tree, target) ?? [target] : [];
+  const nextParents = { ...currentParents };
+  if (target) nextParents[source] = target;
+  else nextParents[source] = null;
+
+  const nextNotes = notes.map((note) => {
+    const sourceIndex = note.tags.indexOf(source);
+    let relativePath: string[];
+    if (sourceIndex >= 0) {
+      relativePath = note.tags.slice(sourceIndex);
+    } else {
+      const descendantIndex = note.tags.findIndex((tag) => subtreeSet.has(tag));
+      if (descendantIndex < 0) return note;
+      relativePath = [source, ...note.tags.slice(descendantIndex)];
+    }
+
+    const merged: string[] = [];
+    const seen = new Set<string>();
+    for (const tag of [...targetPath, ...relativePath]) {
+      const key = tag.toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        merged.push(tag);
+      }
+    }
+    if (merged.length === note.tags.length && merged.every((tag, index) => tag === note.tags[index])) {
+      return note;
+    }
+    return { ...note, tags: merged };
+  });
+
+  return { notes: nextNotes, parents: nextParents };
 }
 
 function isLegacyJapaneseNote(item: SparkNote): boolean {
@@ -424,7 +677,8 @@ export function loadSparkNotes(): SparkNote[] {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return INITIAL_SPARK_NOTES;
     const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) return INITIAL_SPARK_NOTES;
+    if (!Array.isArray(parsed)) return INITIAL_SPARK_NOTES;
+    if (parsed.length === 0) return [];
     const valid = parsed.filter(
       (item): item is SparkNote =>
         typeof item === "object" &&

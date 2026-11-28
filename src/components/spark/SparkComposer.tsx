@@ -54,7 +54,7 @@ export function SparkComposer({
         rows={3}
         disabled={uploading}
         aria-label="记录学习碎片"
-        placeholder="记下一句课堂要点、易混概念或错题反思… 输入 #标签 可自动归类（Ctrl/Cmd + Enter 发布）"
+        placeholder="写下一句课堂的要点、易混概念或错题反思… 输入 #标签 可自动归类（Ctrl/Cmd + Enter 发布）"
         className="w-full resize-none bg-transparent text-[15px] leading-7 text-ink placeholder:text-ink-3 focus:outline-none disabled:opacity-60"
       />
 
@@ -94,7 +94,7 @@ export function SparkComposer({
             className="inline-flex items-center gap-1.5 rounded-lg border tint-ai px-2.5 py-1.5 text-xs font-bold transition hover:opacity-85 disabled:opacity-50"
           >
             <Sparkles className="h-3.5 w-3.5 shrink-0" />
-            填入示例课堂片段
+            填入示例内容
           </button>
 
           <input
@@ -115,7 +115,7 @@ export function SparkComposer({
             className="inline-flex items-center gap-1.5 rounded-lg border border-edge bg-surface-2/60 px-2.5 py-1.5 text-xs font-semibold text-ink-2 transition hover:border-edge-2 hover:text-ink disabled:opacity-50"
           >
             {uploading ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : <Paperclip className="h-3.5 w-3.5 shrink-0" />}
-            {uploading ? "解析中…" : "上传图片/文本解析"}
+            {uploading ? "解析中…" : "上传图片/文件"}
           </button>
         </div>
 

@@ -30,7 +30,7 @@ export function SparkClustersBoard({
 
   return (
     <section
-      className="whiteboard-grid min-h-[calc(100vh-5rem)] rounded-2xl border border-edge p-5 sm:p-8"
+      className="whiteboard-grid flashcard-enter-next min-h-[calc(100vh-5rem)] rounded-2xl border border-edge p-5 sm:p-8"
       aria-label="AI 专题白板"
     >
       {/* 顶部白板工具栏 */}
