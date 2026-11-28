@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { createPortal } from "react-dom";
 import {
   ChevronDown,
   ChevronRight,
   ChevronUp,
   Flame,
+  GripVertical,
   Hash,
   KeyRound,
   LayoutGrid,
@@ -13,7 +15,7 @@ import {
   Star,
 } from "lucide-react";
 import { ThemeToggle } from "../ThemeToggle";
-import type { HeatmapCell, TagTreeNode } from "./sparkData";
+import { findTagNode, type HeatmapCell, type TagTreeNode } from "./sparkData";
 import { SparkPomodoro } from "./SparkPomodoro";
 import type { PomodoroController } from "./usePomodoro";
 
@@ -36,6 +38,9 @@ interface SparkSidebarProps {
   quizCount: number;
   pomodoro: PomodoroController;
   onReturnLanding?: () => void;
+  onTagContextMenu: (tag: string, x: number, y: number) => void;
+  onMergeTag: (source: string, target: string) => void;
+  onDetachTag: (tag: string) => void;
 }
 
 export function SparkSidebar({
@@ -55,27 +60,109 @@ export function SparkSidebar({
   quizCount,
   pomodoro,
   onReturnLanding,
+  onTagContextMenu,
+  onMergeTag,
+  onDetachTag,
 }: SparkSidebarProps) {
   const [showAllTags, setShowAllTags] = useState(false);
-  const [expandedParents, setExpandedParents] = useState<Set<string>>(() => new Set(["高数"]));
+  const [collapsedParents, setCollapsedParents] = useState<Set<string>>(() => new Set());
+  const [dragging, setDragging] = useState<{ tag: string; x: number; y: number } | null>(null);
+  const [dropTarget, setDropTarget] = useState<string | null>(null);
+  const [dropToRoot, setDropToRoot] = useState(false);
+  const pressTimer = useRef<number | undefined>(undefined);
+  const pressStart = useRef({ x: 0, y: 0 });
+  const suppressClick = useRef(false);
   const activeDays = heatmap.filter((c) => c.count > 0).length;
+
+  function cancelPress() {
+    if (pressTimer.current !== undefined) {
+      window.clearTimeout(pressTimer.current);
+      pressTimer.current = undefined;
+    }
+  }
+
+  function startTagPress(event: ReactPointerEvent<HTMLButtonElement>, tag: string) {
+    if (event.button !== 0) return;
+    cancelPress();
+    const x = event.clientX;
+    const y = event.clientY;
+    pressStart.current = { x, y };
+    pressTimer.current = window.setTimeout(() => {
+      pressTimer.current = undefined;
+      suppressClick.current = true;
+      setDragging({ tag, x, y });
+      setDropTarget(null);
+    }, 420);
+  }
+
+  const draggingTag = dragging?.tag;
+
+  useEffect(() => {
+    if (!draggingTag) return;
+    const source = draggingTag;
+    const previousUserSelect = document.body.style.userSelect;
+    document.body.style.userSelect = "none";
+    const findDrop = (x: number, y: number) => {
+      const element = document.elementFromPoint(x, y);
+      return {
+        target: element?.closest<HTMLElement>("[data-tag-row]")?.dataset.tagRow ?? null,
+        root: Boolean(element?.closest("[data-tag-root-zone]")),
+      };
+    };
+    const onMove = (event: PointerEvent) => {
+      event.preventDefault();
+      setDragging((prev) => (prev ? { ...prev, x: event.clientX, y: event.clientY } : prev));
+      const { target, root } = findDrop(event.clientX, event.clientY);
+      setDropTarget(target && target !== source ? target : null);
+      setDropToRoot(root && !target);
+    };
+    const finish = (event: PointerEvent) => {
+      event.preventDefault();
+      const { target, root } = findDrop(event.clientX, event.clientY);
+      if (target && target !== source) onMergeTag(source, target);
+      else if (root && !target) onDetachTag(source);
+      setDragging(null);
+      setDropTarget(null);
+      setDropToRoot(false);
+      window.setTimeout(() => {
+        suppressClick.current = false;
+      }, 0);
+    };
+    const cancel = () => {
+      setDragging(null);
+      setDropTarget(null);
+      setDropToRoot(false);
+      window.setTimeout(() => {
+        suppressClick.current = false;
+      }, 0);
+    };
+    window.addEventListener("pointermove", onMove, { passive: false });
+    window.addEventListener("pointerup", finish);
+    window.addEventListener("pointercancel", cancel);
+    return () => {
+      document.body.style.userSelect = previousUserSelect;
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", finish);
+      window.removeEventListener("pointercancel", cancel);
+    };
+  }, [draggingTag, onMergeTag, onDetachTag]);
+
+  useEffect(() => () => cancelPress(), []);
 
   const baseNodes = showAllTags ? tagTree : tagTree.slice(0, 6);
   const visibleNodes =
     !showAllTags &&
     selectedTag &&
-    !baseNodes.some((n) => n.tag === selectedTag || n.children.some((c) => c.tag === selectedTag))
+    !baseNodes.some((node) => findTagNode([node], selectedTag))
       ? [
           ...baseNodes,
-          ...tagTree.filter(
-            (n) => n.tag === selectedTag || n.children.some((c) => c.tag === selectedTag),
-          ),
+          ...tagTree.filter((node) => findTagNode([node], selectedTag)),
         ]
       : baseNodes;
   const hiddenNodeCount = tagTree.length - visibleNodes.length;
 
   function toggleParentExpand(tag: string) {
-    setExpandedParents((prev) => {
+    setCollapsedParents((prev) => {
       const next = new Set(prev);
       if (next.has(tag)) next.delete(tag);
       else next.add(tag);
@@ -83,7 +170,104 @@ export function SparkSidebar({
     });
   }
 
+  function renderTagNode(node: TagTreeNode, depth: number) {
+    const active = selectedTag === node.tag;
+    const hasChildren = node.children.length > 0;
+    const isExpanded = !collapsedParents.has(node.tag);
+    return (
+      <div key={node.tag} className="space-y-0.5">
+        <div
+          className={`flex items-center rounded-lg pr-2.5 transition-colors ${
+            active
+              ? "border tint-accent font-bold text-accent"
+              : "font-medium text-ink-2 hover:bg-surface/70 hover:text-ink"
+          }`}
+        >
+          {hasChildren ? (
+            <button
+              type="button"
+              aria-label={isExpanded ? `收起 ${node.tag} 子分类` : `展开 ${node.tag} 子分类`}
+              aria-expanded={isExpanded}
+              onClick={() => toggleParentExpand(node.tag)}
+              className="flex h-7 w-6 shrink-0 items-center justify-center text-ink-3 hover:text-ink"
+            >
+              {isExpanded ? (
+                <ChevronDown className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5" />
+              )}
+            </button>
+          ) : (
+            <span className="w-2.5 shrink-0" aria-hidden="true" />
+          )}
+          <button
+            type="button"
+            data-tag-row={node.tag}
+            title="左键筛选 · 长按拖动移动 · 右键删除"
+            onPointerDown={(event) => startTagPress(event, node.tag)}
+            onPointerMove={(event) => {
+              if (
+                pressTimer.current !== undefined &&
+                Math.hypot(
+                  event.clientX - pressStart.current.x,
+                  event.clientY - pressStart.current.y,
+                ) > 8
+              ) {
+                cancelPress();
+              }
+            }}
+            onPointerUp={cancelPress}
+            onPointerCancel={cancelPress}
+            onClick={(event) => {
+              if (suppressClick.current) {
+                event.preventDefault();
+                event.stopPropagation();
+                suppressClick.current = false;
+                return;
+              }
+              if (hasChildren && !active) {
+                setCollapsedParents((prev) => {
+                  const next = new Set(prev);
+                  next.delete(node.tag);
+                  return next;
+                });
+              }
+              onSelectTag(active ? null : node.tag);
+            }}
+            onContextMenu={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onTagContextMenu(node.tag, event.clientX, event.clientY);
+            }}
+            className={`flex min-w-0 flex-1 select-none items-center justify-between py-1.5 text-left text-xs ${
+              dropTarget === node.tag ? "bg-surface ring-2 ring-accent" : ""
+            }`}
+          >
+            <span className="inline-flex min-w-0 items-center gap-1.5 truncate">
+              {depth === 0 ? (
+                <Hash className="h-3 w-3 shrink-0 text-ink-3" />
+              ) : (
+                <span className="h-1 w-1 shrink-0 rounded-full bg-current opacity-60" />
+              )}
+              <span className="truncate">{node.tag}</span>
+            </span>
+            <span className="ml-2 shrink-0 font-mono text-[11px] text-ink-2 tabular-nums">
+              {node.count}
+            </span>
+          </button>
+        </div>
+
+        {hasChildren && isExpanded && (
+          <div className="ml-3 space-y-0.5 border-l border-edge pl-2.5">
+            {node.children.map((child) => renderTagNode(child, depth + 1))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
+    <>
     <aside className="flex h-full flex-col gap-5 overflow-y-auto px-5 py-5" aria-label="导航与知识状态">
       {/* 顶部品牌区 + API 设置 + 主题切换 */}
       <div className="flex shrink-0 items-center justify-between gap-2">
@@ -181,9 +365,9 @@ export function SparkSidebar({
         <p className="px-2.5 pb-1 text-[11px] font-bold tracking-wider text-ink-3">工作视图</p>
         {(
           [
-            { key: "stream", label: "碎片信息流", sub: "Stream", icon: ListFilter },
-            { key: "clusters", label: "AI 专题白板", sub: "Clusters", icon: LayoutGrid },
-            { key: "quiz", label: "闪卡自测模式", sub: "Quiz", icon: Layers },
+            { key: "stream", label: "碎片工作区", sub: "Stream", icon: ListFilter },
+            { key: "clusters", label: "专题板块", sub: "Clusters", icon: LayoutGrid },
+            { key: "quiz", label: "卡片自测", sub: "Quiz", icon: Layers },
           ] as const
         ).map(({ key, label, sub, icon: Icon }) => {
           const active = view === key;
@@ -242,87 +426,21 @@ export function SparkSidebar({
           </span>
         </button>
 
-        <div className="space-y-1 pt-1">
-          {visibleNodes.map((node) => {
-            const active = selectedTag === node.tag;
-            const hasChildren = node.children.length > 0;
-            const isExpanded = expandedParents.has(node.tag);
-            return (
-              <div key={node.tag} className="space-y-0.5">
-                <div
-                  className={`flex items-center rounded-lg pr-2.5 transition-colors ${
-                    active
-                      ? "border tint-accent font-bold text-accent"
-                      : "font-medium text-ink-2 hover:bg-surface/70 hover:text-ink"
-                  }`}
-                >
-                  {hasChildren ? (
-                    <button
-                      type="button"
-                      aria-label={isExpanded ? `收起 ${node.tag} 子标签` : `展开 ${node.tag} 子标签`}
-                      aria-expanded={isExpanded}
-                      onClick={() => toggleParentExpand(node.tag)}
-                      className="flex h-7 w-6 shrink-0 items-center justify-center text-ink-3 hover:text-ink"
-                    >
-                      {isExpanded ? (
-                        <ChevronDown className="h-3.5 w-3.5" />
-                      ) : (
-                        <ChevronRight className="h-3.5 w-3.5" />
-                      )}
-                    </button>
-                  ) : (
-                    <span className="w-2.5 shrink-0" aria-hidden="true" />
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (hasChildren && !active) {
-                        setExpandedParents((prev) => new Set(prev).add(node.tag));
-                      }
-                      onSelectTag(active ? null : node.tag);
-                    }}
-                    className="flex min-w-0 flex-1 items-center justify-between py-1.5 text-left text-xs"
-                  >
-                    <span className="inline-flex min-w-0 items-center gap-1.5 truncate">
-                      <Hash className="h-3 w-3 shrink-0 text-ink-3" />
-                      <span className="truncate">{node.tag}</span>
-                    </span>
-                    <span className="ml-2 shrink-0 font-mono text-[11px] text-ink-2 tabular-nums">
-                      {node.count}
-                    </span>
-                  </button>
-                </div>
-
-                {hasChildren && isExpanded && (
-                  <div className="ml-3 space-y-0.5 border-l border-edge pl-2.5">
-                    {node.children.map((child) => {
-                      const childActive = selectedTag === child.tag;
-                      return (
-                        <button
-                          key={child.tag}
-                          type="button"
-                          onClick={() => onSelectTag(childActive ? null : child.tag)}
-                          className={`flex w-full items-center justify-between rounded-lg px-2 py-1 text-xs transition-colors ${
-                            childActive
-                              ? "border tint-accent font-bold text-accent"
-                              : "font-medium text-ink-3 hover:bg-surface/70 hover:text-ink"
-                          }`}
-                        >
-                          <span className="inline-flex min-w-0 items-center gap-1.5 truncate">
-                            <span className="h-1 w-1 shrink-0 rounded-full bg-current opacity-60" />
-                            <span className="truncate">{child.tag}</span>
-                          </span>
-                          <span className="ml-2 shrink-0 font-mono text-[11px] opacity-80 tabular-nums">
-                            {child.count}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        <div className="relative space-y-1 rounded-lg pt-1">
+          <div
+            data-tag-root-zone
+            aria-hidden="true"
+            title="拖到此处移出分类"
+            className={`absolute -left-5 top-0 h-full w-5 rounded-l-lg transition-colors ${
+              dragging ? "pointer-events-auto" : "pointer-events-none"
+            } ${dragging && dropToRoot ? "border-l-2 border-accent bg-accent/15" : ""}`}
+          />
+          {dragging && dropToRoot && (
+            <p className="pointer-events-none absolute left-6 top-1 z-30 rounded-md bg-surface px-2 py-1 text-[11px] font-semibold text-accent shadow-sm">
+              拖到左侧空白区移出分类
+            </p>
+          )}
+          {visibleNodes.map((node) => renderTagNode(node, 0))}
           {tagTree.length > 6 && (
             <button
               type="button"
@@ -336,5 +454,18 @@ export function SparkSidebar({
         </div>
       </div>
     </aside>
+    {dragging &&
+      createPortal(
+        <div
+          aria-hidden="true"
+          style={{ left: dragging.x + 12, top: dragging.y + 12 }}
+          className="pointer-events-none fixed z-[120] flex max-w-48 items-center gap-1.5 rounded-full border border-accent bg-surface px-3 py-1.5 text-xs font-bold text-accent shadow-2xl"
+        >
+          <GripVertical className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">#{dragging.tag}</span>
+        </div>,
+        document.body,
+      )}
+    </>
   );
 }

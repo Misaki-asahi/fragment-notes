@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Moon, Sun } from "lucide-react";
 
 function readDocumentTheme(): "dark" | "light" {
   return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
@@ -293,12 +292,12 @@ export function SparkDualWings() {
   return (
     <section
       aria-label="双色六翼天使光翼主题切换视觉"
-      className="landing-fade-in relative mx-auto mt-2 w-full max-w-[900px] select-none sm:mt-3"
+      className="landing-fade-in absolute right-4 top-3 z-20 w-32 shrink-0 select-none sm:right-8 sm:top-6 sm:w-48"
     >
       {/* 柔和双层交叉渐隐底光（避免切主题时瞬间闪光） */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-10 bottom-4 top-6 rounded-full blur-3xl transition-opacity duration-700 ease-out"
+        className="pointer-events-none absolute inset-x-3 bottom-0 top-0 rounded-full blur-2xl transition-opacity duration-700 ease-out"
         style={{
           opacity: isDark ? 1 : 0,
           background:
@@ -307,7 +306,7 @@ export function SparkDualWings() {
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-10 bottom-4 top-6 rounded-full blur-3xl transition-opacity duration-700 ease-out"
+        className="pointer-events-none absolute inset-x-3 bottom-0 top-0 rounded-full blur-2xl transition-opacity duration-700 ease-out"
         style={{
           opacity: isDark ? 0 : 1,
           background:
@@ -626,37 +625,6 @@ export function SparkDualWings() {
             />
           </g>
         </svg>
-      </div>
-
-      {/* 双色六翼状态切换胶囊 */}
-      <div className="mt-1 flex items-center justify-center gap-3 text-xs">
-        <button
-          type="button"
-          onClick={() => applyTheme("dark")}
-          aria-pressed={isDark}
-          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 transition-all duration-500 ${
-            isDark
-              ? "tint-accent font-bold text-accent shadow-xs"
-              : "border-edge/80 bg-surface/65 font-medium text-ink-3 hover:border-edge-2 hover:text-ink-2"
-          }`}
-        >
-          <Moon className="h-3 w-3" aria-hidden="true" />
-          深紫夜韵 · 碎玻璃
-        </button>
-
-        <button
-          type="button"
-          onClick={() => applyTheme("light")}
-          aria-pressed={!isDark}
-          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 transition-all duration-500 ${
-            !isDark
-              ? "tint-accent font-bold text-accent shadow-xs"
-              : "border-edge/80 bg-surface/65 font-medium text-ink-3 hover:border-edge-2 hover:text-ink-2"
-          }`}
-        >
-          <Sun className="h-3 w-3" aria-hidden="true" />
-          暖白翡翠 · 纸飞机
-        </button>
       </div>
     </section>
   );

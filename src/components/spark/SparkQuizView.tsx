@@ -193,7 +193,7 @@ export function SparkQuizView({
       <section className="rounded-2xl border border-edge bg-surface p-8 text-center shadow-sm">
         <p className="text-sm font-bold text-ink">当前没有可复习的闪卡</p>
         <button type="button" onClick={onBackToStream} className="btn-secondary mt-4">
-          返回碎片信息流
+          返回工作区
         </button>
       </section>
     );
@@ -215,7 +215,7 @@ export function SparkQuizView({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <span className="inline-flex items-center gap-1.5 rounded-full border tint-accent px-3 py-1 text-xs font-bold text-accent">
             <Award className="h-4 w-4" />
-            今日复习战报卡片
+            复习战报
           </span>
           <span className="font-mono text-xs font-semibold text-ink-3">{scopeLabel}</span>
         </div>
@@ -269,14 +269,14 @@ export function SparkQuizView({
         <div className="mt-6 flex flex-wrap gap-3">
           <button type="button" onClick={resetCurrentDeck} className="btn-primary text-sm">
             <RotateCcw className="h-4 w-4" />
-            再闯一轮
+            再闯一轮！
           </button>
           <button type="button" onClick={onRestartAll} className="btn-secondary">
-            测全部笔记
+            我全都要，测测全部笔记！
           </button>
           <button type="button" onClick={onBackToStream} className="btn-secondary">
             <ArrowLeft className="h-4 w-4" />
-            返回碎片流
+            返回工作区
           </button>
         </div>
       </section>
@@ -313,8 +313,8 @@ export function SparkQuizView({
           {(
             [
               { key: "all", label: "混合模式" },
-              { key: "flip", label: "3D 概念卡" },
-              { key: "cloze", label: "高亮挖空" },
+              { key: "flip", label: "概念卡片" },
+              { key: "cloze", label: "挖空记忆" },
             ] as const
           ).map((item) => (
             <button
@@ -407,7 +407,7 @@ export function SparkQuizView({
                 <div className="flashcard-face flashcard-face-front p-6 sm:p-8">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="rounded-md border tint-accent px-2.5 py-0.5 text-[11px] font-bold text-accent">
-                      3D 概念翻卡 · 问题
+                      概念翻卡 · 问题
                     </span>
                     <div className="flex items-center gap-1.5">
                       {card.retryCount > 0 && (
@@ -430,7 +430,7 @@ export function SparkQuizView({
                   <div className="flex justify-center">
                     <span className="inline-flex items-center gap-1.5 rounded-full border border-edge bg-surface/90 px-3.5 py-1 text-xs font-semibold text-ink-3">
                       <RotateCw className="h-3.5 w-3.5 text-accent" />
-                      点击或按空格翻转查看大白话解析
+                      点击或空格键翻转 查看解析
                     </span>
                   </div>
                 </div>

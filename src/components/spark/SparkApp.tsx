@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Flame, GitBranch, Menu, Sparkles, X } from "lucide-react";
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
+import { AlertTriangle, Flame, GitBranch, Menu, Sparkles, Trash2, X } from "lucide-react";
 import { generateDeck } from "../../api/generateDeck";
+import { askFollowup, type FollowupHistoryItem } from "../../api/followup";
 import { getByok } from "../../utils/byok";
 import { fileToPayload } from "../../utils/fileParser";
 import { AiSettingsDialog } from "../core/AiSettingsDialog";
@@ -16,18 +17,34 @@ import {
   buildQuizQueue,
   buildSingleNoteQuiz,
   buildTagTree,
+  canMergeTag,
+  collectTagSubtree,
   deckToSparkNotes,
   enrichDraftToNote,
   findRelatedNotes,
+  getTagPath,
+  inferTagParentsForNotes,
   loadSparkNotes,
+  loadTagParents,
+  migrateTagSubtree,
   noteMatchesTagFilter,
+  resolveTagAddition,
   saveSparkNotes,
+  saveTagParents,
   type SparkNote,
   type SparkQuizCard,
+  type TagParentMap,
 } from "./sparkData";
 
 interface SparkAppProps {
   onReturnLanding?: () => void;
+}
+
+interface TagMenuState {
+  tag: string;
+  noteId: string | null;
+  x: number;
+  y: number;
 }
 
 export function SparkApp({ onReturnLanding }: SparkAppProps) {
@@ -35,6 +52,9 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
   const [view, setView] = useState<SparkView>("stream");
   const [draft, setDraft] = useState("");
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(() => notes[0]?.id ?? null);
+  const [openFollowupNoteId, setOpenFollowupNoteId] = useState<string | null>(() =>
+    notes[0]?.followups?.length ? notes[0].id : null,
+  );
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [onlyStarred, setOnlyStarred] = useState(false);
 
@@ -51,6 +71,8 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [mobileRelatedOpen, setMobileRelatedOpen] = useState(false);
   const [storageWarning, setStorageWarning] = useState<string | null>(null);
+  const [tagMenu, setTagMenu] = useState<TagMenuState | null>(null);
+  const [tagParents, setTagParents] = useState<TagParentMap>(loadTagParents);
   const pomodoro = usePomodoro();
 
   const notesRef = useRef(notes);
@@ -63,7 +85,42 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
     };
   }, []);
 
-  function commitNotes(updater: (prev: SparkNote[]) => SparkNote[]) {
+  useEffect(() => {
+    if (!tagMenu) return;
+    const close = () => setTagMenu(null);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close();
+    };
+    window.addEventListener("click", close);
+    window.addEventListener("blur", close);
+    window.addEventListener("resize", close);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("click", close);
+      window.removeEventListener("blur", close);
+      window.removeEventListener("resize", close);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [tagMenu]);
+
+  function changeView(next: SparkView) {
+    startTransition(() => setView(next));
+  }
+
+  function selectNote(note: SparkNote) {
+    if (selectedNoteId === note.id) {
+      setOpenFollowupNoteId((current) =>
+        current === note.id ? null : note.followups?.length ? note.id : null,
+      );
+      return;
+    }
+    setSelectedNoteId(note.id);
+    setOpenFollowupNoteId(note.followups?.length ? note.id : null);
+  }
+
+  function commitNotes(updater: (prev: SparkNote[]) => SparkNote[]): boolean {
     const next = updater(notesRef.current);
     notesRef.current = next;
     setNotes(next);
@@ -73,6 +130,16 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
         ? null
         : "本地保存失败，刷新可能丢失本次修改；请检查浏览器存储空间或隐私模式权限。",
     );
+    return saved;
+  }
+
+  function openTagMenu(tag: string, noteId: string | null, x: number, y: number) {
+    setTagMenu({
+      tag,
+      noteId,
+      x: Math.max(8, Math.min(x, window.innerWidth - 180)),
+      y: Math.max(8, Math.min(y, window.innerHeight - 96)),
+    });
   }
 
   const activeNote = useMemo(
@@ -82,7 +149,10 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
 
   const heatmap = useMemo(() => buildHeatmapData(notes), [notes]);
 
-  const { tree: tagTree, totalTagCount } = useMemo(() => buildTagTree(notes), [notes]);
+  const { tree: tagTree, totalTagCount } = useMemo(
+    () => buildTagTree(notes, tagParents),
+    [notes, tagParents],
+  );
 
   const filteredNotes = useMemo(() => {
     return notes.filter((n) => {
@@ -112,6 +182,7 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
     const created = enrichDraftToNote(rawText);
     commitNotes((prev) => [created, ...prev]);
     setSelectedNoteId(created.id);
+    setOpenFollowupNoteId(null);
     setDraft("");
     setSelectedTag(null);
     setOnlyStarred(false);
@@ -129,9 +200,18 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
       try {
         const deck = await generateDeck(payload);
         const generated = deckToSparkNotes(deck);
-        commitNotes((prev) => [...generated, ...prev]);
+        const nextParents = inferTagParentsForNotes(generated, tagParents);
+        const notesSaved = commitNotes((prev) => [...generated, ...prev]);
+        if (nextParents !== tagParents) {
+          const parentsSaved = saveTagParents(nextParents);
+          setTagParents(nextParents);
+          if (!notesSaved || !parentsSaved) {
+            setStorageWarning("卡片已生成，但分类或笔记保存失败，刷新后可能丢失。请检查浏览器存储空间或隐私模式权限。");
+          }
+        }
         setSelectedNoteId(generated[0].id);
-        setView("stream");
+        setOpenFollowupNoteId(null);
+        changeView("stream");
         setUploadNotice(`已通过 AI 解析「${file.name}」，生成 ${generated.length} 张结构化碎片卡片`);
       } catch {
         // 若本地转发层或密钥未配置，仍从文本/文件名本地提炼卡片，确保演示流畅不卡死
@@ -142,6 +222,7 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
         const localNote = enrichDraftToNote(rawSource);
         commitNotes((prev) => [localNote, ...prev]);
         setSelectedNoteId(localNote.id);
+        setOpenFollowupNoteId(null);
         scheduleAiFinish(localNote.id);
         setUploadNotice(`已提取「${file.name}」内容并完成本地提炼（配置 API 后可调用远端多模态深度解析）`);
       }
@@ -153,34 +234,203 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
   }
 
   function startQuizAll() {
-    setQuizCards(buildQuizQueue(notes));
-    setQuizScope(`全部碎片混合复习（${notes.length} 条）`);
-    setQuizRunId((id) => id + 1);
-    setView("quiz");
+    startTransition(() => {
+      setQuizCards(buildQuizQueue(notes));
+      setQuizScope(`全部碎片混合复习（${notes.length} 条）`);
+      setQuizRunId((id) => id + 1);
+      setView("quiz");
+    });
     setMobileNavOpen(false);
   }
 
   function startQuizCluster(cluster: string) {
-    const cards = buildQuizQueue(notes, cluster);
-    setQuizCards(cards);
-    setQuizScope(`专题：${cluster}`);
-    setQuizRunId((id) => id + 1);
-    setView("quiz");
+    startTransition(() => {
+      const cards = buildQuizQueue(notes, cluster);
+      setQuizCards(cards);
+      setQuizScope(`专题：${cluster}`);
+      setQuizRunId((id) => id + 1);
+      setView("quiz");
+    });
   }
 
   function startQuizSingleNote(note: SparkNote) {
-    setQuizCards(buildSingleNoteQuiz(note));
-    setQuizScope(`单卡速测：${note.aiTitle.slice(0, 14)}…`);
-    setQuizRunId((id) => id + 1);
-    setView("quiz");
+    startTransition(() => {
+      setQuizCards(buildSingleNoteQuiz(note));
+      setQuizScope(`单卡速测：${note.aiTitle.slice(0, 14)}…`);
+      setQuizRunId((id) => id + 1);
+      setView("quiz");
+    });
   }
 
   function jumpToNote(note: SparkNote) {
-    setSelectedNoteId(note.id);
+    selectNote(note);
     setSelectedTag(null);
     setOnlyStarred(false);
-    setView("stream");
+    changeView("stream");
     setMobileRelatedOpen(false);
+  }
+
+  function deleteNote(note: SparkNote) {
+    if (!window.confirm("确定删除这条碎片笔记吗？此操作不可撤销。")) return;
+    const next = notesRef.current.filter((item) => item.id !== note.id);
+    if (selectedNoteId === note.id) {
+      setSelectedNoteId(next[0]?.id ?? null);
+      setOpenFollowupNoteId(null);
+    }
+    setQuizCards((cards) => cards.filter((card) => card.noteId !== note.id));
+    commitNotes(() => next);
+  }
+
+  function addTag(noteId: string, rawTag: string) {
+    const tag = rawTag.trim().replace(/^#+/, "");
+    if (!tag || tag.length > 20 || /\s/.test(tag)) return;
+    const note = notesRef.current.find((item) => item.id === noteId);
+    if (!note) return;
+    const result = resolveTagAddition(note.tags, tag, tagTree, tagParents);
+    const notesSaved = commitNotes((prev) =>
+      prev.map((item) => (item.id === noteId ? { ...item, tags: result.tags } : item)),
+    );
+    if (result.parents !== tagParents) {
+      const parentsSaved = saveTagParents(result.parents);
+      setTagParents(result.parents);
+      if (!notesSaved || !parentsSaved) {
+        setStorageWarning("标签已更新，但本地保存失败，刷新后可能丢失。请检查浏览器存储空间或隐私模式权限。");
+      }
+    }
+  }
+
+  function moveTag(source: string, target: string | null) {
+    const result = migrateTagSubtree(notesRef.current, source, target, tagTree, tagParents);
+    const notesSaved = commitNotes(() => result.notes);
+    const parentsSaved = saveTagParents(result.parents);
+    setTagParents(result.parents);
+    if (!notesSaved || !parentsSaved) {
+      setStorageWarning("标签移动已应用，但本地保存失败，刷新后可能丢失。请检查浏览器存储空间或隐私模式权限。");
+    }
+  }
+
+  function mergeTag(source: string, target: string) {
+    if (source === target) return;
+    const sourcePath = getTagPath(tagTree, source);
+    if (sourcePath && sourcePath[sourcePath.length - 2] === target) return;
+    if (!canMergeTag(source, target, tagParents)) {
+      window.alert("不能把标签移动到它自己或它的子分类下。");
+      return;
+    }
+    moveTag(source, target);
+  }
+
+  function detachTag(source: string) {
+    const sourcePath = getTagPath(tagTree, source);
+    if (!sourcePath || sourcePath.length === 1) return;
+    moveTag(source, null);
+  }
+
+  function updateCloze(noteId: string, content: string, clozeTerms: string[]) {
+    commitNotes((prev) =>
+      prev.map((note) => (note.id === noteId ? { ...note, content, clozeTerms } : note)),
+    );
+  }
+
+  async function submitFollowup(
+    noteId: string,
+    question: string,
+    history: FollowupHistoryItem[],
+    regenerateId?: string,
+  ) {
+    const note = notesRef.current.find((item) => item.id === noteId);
+    if (!note) return;
+    const result = await askFollowup({
+      note: {
+        title: note.aiTitle,
+        content: note.content,
+        question: note.question,
+        plainExplanation: note.plainExplanation,
+        confusion: note.confusion,
+      },
+      question,
+      history,
+    });
+    commitNotes((prev) =>
+      prev.map((item) => {
+        if (item.id !== noteId) return item;
+        const followups = item.followups ?? [];
+        if (regenerateId) {
+          return {
+            ...item,
+            followups: followups.map((turn) =>
+              turn.id === regenerateId
+                ? { ...turn, answer: result.answer, model: result.model, updatedAt: Date.now() }
+                : turn,
+            ),
+          };
+        }
+        return {
+          ...item,
+          followups: [
+            ...followups,
+            {
+              id: crypto.randomUUID(),
+              question,
+              answer: result.answer,
+              createdAt: Date.now(),
+              model: result.model,
+            },
+          ],
+        };
+      }),
+    );
+  }
+
+  function deleteFollowup(noteId: string, turnId: string) {
+    commitNotes((prev) =>
+      prev.map((note) =>
+        note.id === noteId
+          ? { ...note, followups: (note.followups ?? []).filter((turn) => turn.id !== turnId) }
+          : note,
+      ),
+    );
+  }
+
+  function removeTagFromMenu() {
+    if (!tagMenu) return;
+    const descendants = collectTagSubtree(tagTree, tagMenu.tag).slice(1);
+    const tagsToRemove = tagMenu.noteId
+      ? [tagMenu.tag]
+      : [tagMenu.tag, ...descendants];
+    const message = tagMenu.noteId
+      ? `确定从这张卡片移除标签「${tagMenu.tag}」吗？卡片不会被删除。`
+      : descendants.length > 0
+        ? `确定删除分类「${tagMenu.tag}」吗？该分类及其 ${descendants.length} 个后代标签会从所有卡片中移除。`
+        : `确定删除标签「${tagMenu.tag}」吗？该标签会从所有卡片中移除。`;
+    if (!window.confirm(message)) {
+      setTagMenu(null);
+      return;
+    }
+    const notesSaved = commitNotes((prev) =>
+      prev.map((note) => {
+        if (tagMenu.noteId && note.id !== tagMenu.noteId) return note;
+        const tags = note.tags.filter((tag) => !tagsToRemove.includes(tag));
+        return tags.length === note.tags.length ? note : { ...note, tags };
+      }),
+    );
+    let parentsSaved = true;
+    if (!tagMenu.noteId) {
+      const nextParents = Object.fromEntries(
+        Object.entries(tagParents).filter(
+          ([child, parent]) =>
+            !tagsToRemove.includes(child) &&
+            !(typeof parent === "string" && tagsToRemove.includes(parent)),
+        ),
+      );
+      parentsSaved = saveTagParents(nextParents);
+      setTagParents(nextParents);
+    }
+    if (!notesSaved || !parentsSaved) {
+      setStorageWarning("标签删除已应用，但本地保存失败，刷新后可能丢失。请检查浏览器存储空间或隐私模式权限。");
+    }
+    if (selectedTag && tagsToRemove.includes(selectedTag)) setSelectedTag(null);
+    setTagMenu(null);
   }
 
   const sidebarProps = {
@@ -190,7 +440,7 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
         startQuizAll();
         return;
       }
-      setView(next);
+      changeView(next);
       setMobileNavOpen(false);
     },
     onStartQuiz: startQuizAll,
@@ -201,13 +451,17 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
     selectedTag,
     onlyStarred,
     onSelectTag: (tag: string | null) => {
-      setSelectedTag(tag);
-      setView("stream");
+      startTransition(() => {
+        setSelectedTag(tag);
+        setView("stream");
+      });
       setMobileNavOpen(false);
     },
     onToggleStarred: () => {
-      setOnlyStarred((v) => !v);
-      setView("stream");
+      startTransition(() => {
+        setOnlyStarred((v) => !v);
+        setView("stream");
+      });
       setMobileNavOpen(false);
     },
     hasByok,
@@ -223,10 +477,13 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
           onReturnLanding();
         }
       : undefined,
+    onTagContextMenu: (tag: string, x: number, y: number) => openTagMenu(tag, null, x, y),
+    onMergeTag: mergeTag,
+    onDetachTag: detachTag,
   };
 
   return (
-    <div className="site-shell min-h-screen bg-void text-ink">
+    <div className="site-shell min-h-screen bg-void text-ink animate-[landing-fade-in_0.42s_ease-out_backwards]">
       {/* 移动端顶部紧凑栏（< lg 显示） */}
       <header className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-edge bg-surface/90 px-4 py-3 backdrop-blur-md lg:hidden">
         <button
@@ -322,7 +579,7 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
             )}
 
             {view === "stream" && (
-              <div className="space-y-6">
+              <div className="space-y-6 flashcard-enter-next">
                 {/* 中等桌面（1024~1279px）右栏收起时提供快速开启关联面板的提示条 */}
                 <div className="flex flex-wrap items-center justify-between gap-2 xl:hidden">
                   <p className="text-xs font-semibold text-ink-3">
@@ -377,26 +634,33 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
                 {/* 碎片卡片信息流 */}
                 <div className="space-y-5">
                   {filteredNotes.length === 0 ? (
-                    <div className="rounded-2xl border border-edge bg-surface p-8 text-center">
-                      <p className="text-sm font-bold text-ink">当前筛选下还没有碎片笔记</p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedTag(null);
-                          setOnlyStarred(false);
-                        }}
-                        className="btn-secondary mt-3 text-xs"
-                      >
-                        显示全部碎片
-                      </button>
-                    </div>
+                    notes.length > 0 ? (
+                      <div className="rounded-2xl border border-edge bg-surface p-8 text-center">
+                        <p className="text-sm font-bold text-ink">当前筛选下还没有碎片笔记</p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedTag(null);
+                            setOnlyStarred(false);
+                          }}
+                          className="btn-secondary mt-3 text-xs"
+                        >
+                          显示全部碎片
+                        </button>
+                      </div>
+                    ) : null
                   ) : (
                     filteredNotes.map((note) => (
                       <SparkNoteCard
                         key={note.id}
                         note={note}
                         selected={note.id === activeNote?.id}
-                        onSelect={(n) => setSelectedNoteId(n.id)}
+                        followupOpen={openFollowupNoteId === note.id}
+                        onFollowupOpenChange={(open) => {
+                          setOpenFollowupNoteId(open ? note.id : null);
+                          if (open) setSelectedNoteId(note.id);
+                        }}
+                        onSelect={selectNote}
                         onToggleStar={(id) =>
                           commitNotes((prev) =>
                             prev.map((item) =>
@@ -406,6 +670,12 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
                         }
                         onClickTag={(tag) => setSelectedTag((cur) => (cur === tag ? null : tag))}
                         onMakeFlashcard={startQuizSingleNote}
+                        onDelete={deleteNote}
+                        onAddTag={addTag}
+                        onTagContextMenu={openTagMenu}
+                        onUpdateCloze={updateCloze}
+                        onAskFollowup={submitFollowup}
+                        onDeleteFollowup={deleteFollowup}
                       />
                     ))
                   )}
@@ -417,7 +687,7 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
               <SparkClustersBoard
                 notes={notes}
                 selectedNoteId={activeNote?.id ?? null}
-                onSelectNote={(n) => setSelectedNoteId(n.id)}
+                onSelectNote={selectNote}
                 onQuizCluster={startQuizCluster}
               />
             )}
@@ -427,7 +697,7 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
                 key={quizRunId}
                 initialCards={quizCards}
                 scopeLabel={quizScope}
-                onBackToStream={() => setView("stream")}
+                onBackToStream={() => changeView("stream")}
                 onRestartAll={startQuizAll}
               />
             )}
@@ -505,6 +775,37 @@ export function SparkApp({ onReturnLanding }: SparkAppProps) {
               />
             </div>
           </div>
+        </div>
+      )}
+
+      {tagMenu && (
+        <div
+          role="menu"
+          aria-label={`标签 ${tagMenu.tag} 操作`}
+          onClick={(event) => event.stopPropagation()}
+          onContextMenu={(event) => event.preventDefault()}
+          style={{ left: tagMenu.x, top: tagMenu.y }}
+          className="fixed z-[100] w-44 rounded-xl border border-edge bg-surface p-1.5 shadow-2xl"
+        >
+          <p className="truncate px-2.5 py-1 text-[11px] font-semibold text-ink-3">#{tagMenu.tag}</p>
+          <button
+            type="button"
+            role="menuitem"
+            autoFocus
+            onClick={removeTagFromMenu}
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-bad transition-colors hover:bg-surface-2"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            删除标签
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => setTagMenu(null)}
+            className="w-full rounded-lg px-2.5 py-2 text-left text-xs font-medium text-ink-2 transition-colors hover:bg-surface-2"
+          >
+            取消
+          </button>
         </div>
       )}
 
